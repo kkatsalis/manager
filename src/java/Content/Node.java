@@ -50,9 +50,11 @@ public class Node {
         String node=_nodeID;
         String action=_action;
         
-        if("imageLoad".equals(action))
-            command="omf load -i baseline.ndz -t omf.nitos."+node;
-        else if("on".equals(action)||"reboot".equals(action))
+        if("imageLoad".equals(action)){
+             command ="omf6 load -t "+node+" -i baseline.ndz ";
+           //command="omf load -i baseline.ndz -t omf.nitos."+node;
+        }
+       else if("on".equals(action)||"reboot".equals(action))
             command="omf tell -a "+action+" -t omf.nitos."+node;
       
         
