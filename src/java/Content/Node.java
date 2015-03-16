@@ -61,7 +61,7 @@ public class Node {
         String response=Utilities.remoteExecution(address,slice,command);
          
          if("imageLoad".equals(action)){
-              if(response.toLowerCase().contains("1 node successfully imaged".toLowerCase()))
+              if(response.toLowerCase().contains("Load proccess completed".toLowerCase()))
                       response="success";
               else 
                   response="failure";
