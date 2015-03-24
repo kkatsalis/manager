@@ -6,6 +6,7 @@
 
 package Content;
 
+import java.util.Hashtable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.ws.rs.core.Context;
@@ -35,15 +36,13 @@ public class Node {
     }
 
     /**
-     * Retrieves representation of an instance of Content.Node
+     * Executes remote actions on the NITOS server
      * @return an instance of java.lang.String
      */
-   
-
     @GET
     @Path("{nodeID}/{action}")
     @Produces("application/json")
-    public String actionOnNode(@PathParam("nodeID") String _nodeID,@PathParam("action") String _action) {
+    public String execOnServer(@PathParam("nodeID") String _nodeID,@PathParam("action") String _action) {
 
         String address="nitlab3.inf.uth.gr";
         String slice="kostas";
@@ -56,7 +55,7 @@ public class Node {
         
         // Image load
          //command="omf load -i baseline.ndz -t omf.nitos."+node;
-        if("imageLoad".equals(action)){
+        if("imageload".equals(action.toLowerCase())){
              command ="omf6 load -t "+node+" -i baseline.ndz ";
              
              response=Utilities.remoteExecution(address,slice,command);
@@ -68,7 +67,7 @@ public class Node {
         }
         // command="omf tell -a "+action+" -t omf.nitos."+node;
         // on/off/reset
-        if("on".equals(action)||"off".equals(action)||"reset".equals(action)){
+        if("on".equals(action.toLowerCase())||"off".equals(action.toLowerCase())||"reset".equals(action.toLowerCase())){
              command="omf6 tell -a "+action+" -t "+node;
             
              response=Utilities.remoteExecution(address,slice,command);
@@ -79,7 +78,7 @@ public class Node {
                      response="failure";
         }
         
-        if("status".equals(action)){
+        if("status".equals(action.toLowerCase())){
              command="omf6 stat -t "+node;
             
              response=Utilities.remoteExecution(address,slice,command);
@@ -94,44 +93,32 @@ public class Node {
             
             
          return jsonObj;
-    //    return "<html lang=\"en\"><body><h1>"+response+"</body></h1></html>";
+    
     }
     /**
-     * PUT method for updating or creating an instance of Node
+     * POST method for updating or creating the network configuration of Node
      * @param content representation for the resource
      * @return an HTTP response with content of the updated or created resource.
      */
-    @POST
-    @Consumes("application/json")
-    @Produces("application/json")
-    @Path("/hostapd")
-    public String postHostapd(@PathParam("nodeID") String _nodeID,final Hostapd body) {
-        
-        String node=_nodeID;
-        String address="10.1.0"+_nodeID.replace("node0", "");
-        String jsonObj="";
-        String command="";
-        String response="";
-        
-         jsonObj="{\"node\":\""+node+"\",\"action\":\""+"hostapdConfig"+"\",\"status\":\""+response+"\"}";
-        
-         jsonObj=body.param1+" "+body.param2;
-         
-         return jsonObj;
-    }
-    
+   
     @POST
     @Consumes("application/json")
     @Produces("application/json")
     @Path("{nodeID}/network")
-    public String postNodeNetwork(@PathParam("nodeID") String _nodeID,final Hostapd body) {
+    public String postNetworkConfig(@PathParam("nodeID") String _nodeID,final NetworkConfig body) {
         
-        String address="10.1.0"+_nodeID.replace("node0", "");
-        String slice="kostas";
-        String node=_nodeID;
+        Hashtable<String,String> parameters=new Hashtable<String,String>();
+        
+        parameters.put("slice","kostas");
+        parameters.put("node",_nodeID);
+        parameters.put("vlan",body.vlan);
+        parameters.put("address",body.address);
+        parameters.put("netmask",body.netmask);
+        parameters.put("bridge",body.bridge);
+        
         
         String jsonObj="";
-        String command="";
+        
         String response="";
         
          jsonObj="{\"node\":\""+_nodeID+"\",\"action\":\""+"hostapdConfig"+"\",\"status\":\""+response+"\"}";

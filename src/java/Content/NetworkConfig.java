@@ -15,9 +15,12 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 
 @XmlRootElement
-public class Hostapd {
+public class NetworkConfig {
     
-    @XmlElement public String param1;
-    @XmlElement public String param2;
+    @XmlElement public String vlan;
+    @XmlElement public String address;
+    @XmlElement public String netmask;
+    @XmlElement public String bridge;
+    
     
 }
