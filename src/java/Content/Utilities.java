@@ -24,7 +24,6 @@ public class Utilities {
     
         
        String response="";
-        String image="baseline.ndz";
        
         try{
             
