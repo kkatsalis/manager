@@ -40,7 +40,7 @@ public class Node {
      * @return an instance of java.lang.String
      */
     @GET
-    @Path("{nodeID}/{action}")
+    @Path("/node{nodeID}/{action}")
     @Produces("application/json")
     public String execOnServer(@PathParam("nodeID") String _nodeID,@PathParam("action") String _action) {
 
@@ -54,9 +54,11 @@ public class Node {
         String response="";
         
         // Image load
-         //command="omf load -i baseline.ndz -t omf.nitos."+node;
         if("imageload".equals(action.toLowerCase())){
-             command ="omf6 load -t "+node+" -i baseline.ndz ";
+            // OMF 6 
+            command ="omf6 load -t "+node+" -i baseline.ndz ";
+            //OMF 5
+            //command="omf load -i baseline.ndz -t omf.nitos."+node;
              
              response=Utilities.remoteExecution(address,slice,command);
              
@@ -65,10 +67,14 @@ public class Node {
               else 
                   response="failure";
         }
-        // command="omf tell -a "+action+" -t omf.nitos."+node;
+       
         // on/off/reset
         if("on".equals(action.toLowerCase())||"off".equals(action.toLowerCase())||"reset".equals(action.toLowerCase())){
-             command="omf6 tell -a "+action+" -t "+node;
+            //OMF 6 
+            command="omf6 tell -a "+action+" -t "+node;
+            
+            //OMF 5
+            // command="omf tell -a "+action+" -t omf.nitos."+node;
             
              response=Utilities.remoteExecution(address,slice,command);
             
@@ -107,7 +113,7 @@ public class Node {
     @Path("{nodeID}/network")
     public String postNetworkConfig(@PathParam("nodeID") String _nodeID,final NetworkConfig body) {
         
-        Hashtable<String,String> parameters=new Hashtable<String,String>();
+        Hashtable<String,String> parameters=new Hashtable<>();
         
         parameters.put("slice","kostas");
         parameters.put("node",_nodeID);
@@ -116,12 +122,18 @@ public class Node {
         parameters.put("netmask",body.netmask);
         parameters.put("bridge",body.bridge);
         
+        String address="nitlab3.inf.uth.gr";
+        String slice="kostas";
+        String response="";
+        String nodeAddress="root@"+_nodeID;
+        
+        String command="ssh -oStrictHostKeyChecking=no $h "+nodeAddress+" echo 'kostas'";
+        
+        response=Utilities.remoteExecution(address,slice,command);
         
         String jsonObj="";
         
-        String response="";
-        
-         jsonObj="{\"node\":\""+_nodeID+"\",\"action\":\""+"hostapdConfig"+"\",\"status\":\""+response+"\"}";
+        jsonObj="{\"node\":\""+_nodeID+"\",\"action\":\""+"hostapdConfig"+"\",\"status\":\""+response+"\"}";
         
          return jsonObj;
     }
