@@ -12,6 +12,7 @@ import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
 import java.io.InputStream;
 import java.util.Hashtable;
+import javax.swing.text.html.HTML;
 
 import org.apache.commons.io.IOUtils;
 
@@ -21,9 +22,11 @@ import org.apache.commons.io.IOUtils;
  */
 public class Utilities {
     
-    public static String remoteExecution(String address,String slice,String command){
+
     
-        
+    public static String remoteExecution(String slice,String command){
+    
+       String address="nitlab3.inf.uth.gr";
        String response="";
        
         try{
@@ -77,5 +80,57 @@ public class Utilities {
   
           }       //end main
 
+    public static String executeImageLoad(String slice,String node){
     
+     //OMF 5
+     //command="omf load -i baseline.ndz -t omf.nitos."+node;
+    String command ="omf6 load -t "+node+" -i baseline.ndz ";    
+    String response=Utilities.remoteExecution(slice,command);
+             
+             if(response.toLowerCase().contains("Load proccess completed".toLowerCase()))
+                      response="success";
+              else 
+                  response="failure";
+             
+             
+             return response;
+    }    
+
+    public static String executeAction(String slice,String node, String action){
+    
+    String command="omf6 tell -a "+action+" -t "+node;
+            
+           String  response=Utilities.remoteExecution(slice,command);
+            
+            if(response.toLowerCase().contains("Proccess complete".toLowerCase()))
+                     response="success";
+               else 
+                     response="failure";
+            
+            return response;
+    }
+    
+    public static String findCMStatus(String slice,String node){
+    
+           String command="omf6 stat -t "+node;
+            
+           String  response=remoteExecution(slice,command);
+            
+           if(response.toLowerCase().contains("status is: on".toLowerCase()))
+                     response="on";
+               else 
+                     response="off";
+            
+            return response;
+    }
+
+    public static String networkConfig(String slice,String node, Hashtable<String,String> parameters){
+    
+        String response="";
+        String nodeAddress="root@"+node;
+        String command="ssh -oStrictHostKeyChecking=no $h "+node+" echo 'kostas'";
+        
+        
+        return response;
+    }
 }
