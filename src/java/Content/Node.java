@@ -6,6 +6,7 @@
 
 package Content;
 
+import java.io.IOException;
 import java.util.Hashtable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -22,12 +23,13 @@ import javax.ws.rs.QueryParam;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+
 /**
  * REST Web Service
  *
  * @author nitlab
  */
-@Path("/node")
+@Path("/")
 public class Node {
 
      
@@ -44,34 +46,32 @@ public class Node {
     @GET
     @Path("/node")
     @Produces("application/json")
-    public String execOnServer(@QueryParam("name") String _nodeID,
+    public String execNodeAction(@QueryParam("name") String _nodeID,
                                @QueryParam("action") String _action,
                                @QueryParam("slice") String _slice) {
-
        
         String slice=_slice;
         String nodeID=_nodeID;
         String action=_action;
-        
         String jsonResponse="";
-        String response="";
-        
-        // Image load
-        if("imageload".equals(action.toLowerCase())){
-            response=Utilities.executeImageLoad(slice,nodeID);
-        }
-       
-        // on/off/reset
-        if("on".equals(action.toLowerCase())||"off".equals(action.toLowerCase())||"reset".equals(action.toLowerCase())){
-            response=Utilities.executeAction(slice, nodeID, action);
-         }
-        
-        if("status".equals(action.toLowerCase())){
-            response=Utilities.findCMStatus(slice,nodeID);
-         }
+     
+        try {
+            // Image load
+            if("imageload".equals(action.toLowerCase())){
+                jsonResponse=Utilities.executeImageLoad(slice,nodeID);
+            }
+            // on/off/reset
+            if("on".equals(action.toLowerCase())||"off".equals(action.toLowerCase())||"reset".equals(action.toLowerCase())){
+                jsonResponse=Utilities.executeAction(slice, nodeID, action);
+             }
+            if("status".equals(action.toLowerCase())){
+                jsonResponse=Utilities.findCMStatus(slice,nodeID);
+             }
          
-            jsonResponse="{\"node\":\""+_nodeID+"\",\"action\":\""+_action+"\",\"status\":\""+response+"\"}";
-            
+        } catch (IOException ex) {
+          Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
+        }
+         
          return jsonResponse;
     
     }
@@ -84,15 +84,14 @@ public class Node {
     @POST
     @Consumes("application/json")
     @Produces("application/json")
-    @Path("{nodeID}/network")
+    @Path("/node/network")
     public String postNetworkConfig(@QueryParam("name") String _nodeID,
-                               @QueryParam("action") String _action,
-                               @QueryParam("slice") String _slice,
+                                    @QueryParam("slice") String _slice,
                                final NetworkConfig body) {
         
         Hashtable<String,String> parameters=new Hashtable<>();
         
-        parameters.put("slice","kostas");
+        parameters.put("slice",_slice);
         parameters.put("node",_nodeID);
         parameters.put("vlan",body.vlan);
         parameters.put("address",body.address);
@@ -101,7 +100,7 @@ public class Node {
         
        
         
-        String response=Utilities.networkConfig(_slice, _nodeID,parameters);
+        String response=Utilities.createNetworkConfig(_slice, _nodeID,parameters);
         
         String jsonObj="";
         

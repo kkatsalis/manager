@@ -10,11 +10,17 @@ import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.Hashtable;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
 import javax.swing.text.html.HTML;
 
 import org.apache.commons.io.IOUtils;
+
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 /**
  *
@@ -22,13 +28,23 @@ import org.apache.commons.io.IOUtils;
  */
 public class Utilities {
     
+    private final static Logger LOGGER = Logger.getLogger(Utilities.class.getName()); 
+  
 
     
-    public static String remoteExecution(String slice,String command){
+    public static String remoteExecution(String slice,String command) throws IOException{
     
        String address="nitlab3.inf.uth.gr";
        String response="";
        
+        // This block configure the logger with handler and formatter  
+        LOGGER.setLevel(Level.ALL);
+        FileHandler fh;
+        fh = new FileHandler("manager.log");  
+        LOGGER.addHandler(fh);
+        SimpleFormatter formatter = new SimpleFormatter();  
+        fh.setFormatter(formatter);   
+        
         try{
             
              JSch jsch=new JSch();
@@ -74,57 +90,66 @@ public class Utilities {
                }
                catch(Exception e){
                  System.out.println(e);
+                
+                 LOGGER.log(Level.INFO,e.toString());
               }
  
         return response;
   
           }       //end main
 
-    public static String executeImageLoad(String slice,String node){
+  public static String executeImageLoad(String slice,String node) throws IOException{
     
      //OMF 5
      //command="omf load -i baseline.ndz -t omf.nitos."+node;
     String command ="omf6 load -t "+node+" -i baseline.ndz ";    
     String response=Utilities.remoteExecution(slice,command);
+    String jsonResponse="";         
              
-             if(response.toLowerCase().contains("Load proccess completed".toLowerCase()))
-                      response="success";
-              else 
-                  response="failure";
+    if(response.toLowerCase().contains("Load proccess completed".toLowerCase()))
+       response="success";
+    else 
+       response="failure";
              
-             
-             return response;
+        jsonResponse="{\"node\":\""+node+"\",\"action\":\""+"imageLoad"+"\",\"status\":\""+response+"\"}";
+
+             return jsonResponse;
     }    
 
-    public static String executeAction(String slice,String node, String action){
+    public static String executeAction(String slice,String node, String action) throws IOException{
     
-    String command="omf6 tell -a "+action+" -t "+node;
+        String command="omf6 tell -a "+action+" -t "+node;
+        String jsonResponse="";           
+        String  response=Utilities.remoteExecution(slice,command);
             
-           String  response=Utilities.remoteExecution(slice,command);
+        if(response.toLowerCase().contains("Proccess complete".toLowerCase()))
+           response="success";
+        else 
+            response="failure";
             
-            if(response.toLowerCase().contains("Proccess complete".toLowerCase()))
-                     response="success";
-               else 
-                     response="failure";
-            
-            return response;
+            jsonResponse="{\"node\":\""+node+"\",\"action\":\""+action+"\",\"status\":\""+response+"\"}";
+ 
+            return jsonResponse;
     }
     
-    public static String findCMStatus(String slice,String node){
+    public static String findCMStatus(String slice,String node) throws IOException{
     
            String command="omf6 stat -t "+node;
-            
+           String jsonResponse="";     
+           
            String  response=remoteExecution(slice,command);
             
            if(response.toLowerCase().contains("status is: on".toLowerCase()))
-                     response="on";
-               else 
-                     response="off";
+              response="on";
+           else 
+              response="off";
             
-            return response;
+           jsonResponse="{\"node\":\""+node+"\",\"action\":\""+"nodeStatus"+"\",\"status\":\""+response+"\"}";
+          
+           return jsonResponse;
     }
 
-    public static String networkConfig(String slice,String node, Hashtable<String,String> parameters){
+    public static String createNetworkConfig(String slice,String node, Hashtable<String,String> parameters){
     
         String response="";
         String nodeAddress="root@"+node;
