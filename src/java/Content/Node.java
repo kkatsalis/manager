@@ -44,7 +44,7 @@ public class Node {
      * @return an instance of java.lang.String
      */
     @GET
-    @Path("/node")
+    @Path("node")
     @Produces("application/json")
     public String execNodeAction(@QueryParam("name") String _nodeID,
                                @QueryParam("action") String _action,
@@ -84,27 +84,22 @@ public class Node {
     @POST
     @Consumes("application/json")
     @Produces("application/json")
-    @Path("/node/network")
+    @Path("/network/node")
     public String postNetworkConfig(@QueryParam("name") String _nodeID,
                                     @QueryParam("slice") String _slice,
                                final NetworkConfig body) {
         
         Hashtable<String,String> parameters=new Hashtable<>();
         
-        parameters.put("slice",_slice);
-        parameters.put("node",_nodeID);
+
         parameters.put("vlan",body.vlan);
         parameters.put("address",body.address);
         parameters.put("netmask",body.netmask);
         parameters.put("bridge",body.bridge);
+        parameters.put("driver",body.driver);
         
-       
+        String jsonObj=Utilities.createNetworkConfig(_slice, _nodeID,parameters);
         
-        String response=Utilities.createNetworkConfig(_slice, _nodeID,parameters);
-        
-        String jsonObj="";
-        
-        jsonObj="{\"node\":\""+_nodeID+"\",\"action\":\""+"hostapdConfig"+"\",\"status\":\""+response+"\"}";
         
          return jsonObj;
     }

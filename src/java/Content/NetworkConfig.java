@@ -18,9 +18,11 @@ import javax.xml.bind.annotation.XmlRootElement;
 public class NetworkConfig {
     
     @XmlElement public String vlan;
+    @XmlElement public String driver;
     @XmlElement public String address;
     @XmlElement public String netmask;
     @XmlElement public String bridge;
+    
     
     
 }

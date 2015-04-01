@@ -30,7 +30,6 @@ public class Utilities {
     
     private final static Logger LOGGER = Logger.getLogger(Utilities.class.getName()); 
   
-
     
     public static String remoteExecution(String slice,String command) throws IOException{
     
@@ -98,7 +97,7 @@ public class Utilities {
   
           }       //end main
 
-  public static String executeImageLoad(String slice,String node) throws IOException{
+    public static String executeImageLoad(String slice,String node) throws IOException{
     
      //OMF 5
      //command="omf load -i baseline.ndz -t omf.nitos."+node;
@@ -151,11 +150,46 @@ public class Utilities {
 
     public static String createNetworkConfig(String slice,String node, Hashtable<String,String> parameters){
     
-        String response="";
-        String nodeAddress="root@"+node;
-        String command="ssh -oStrictHostKeyChecking=no $h "+node+" echo 'kostas'";
+        String command="";
+        String jsonResponse=" "; 
         
+        String prefix="ssh -oStrictHostKeyChecking=no $h root@"+node+" ";
         
-        return response;
+        try {
+          
+            command=prefix+"echo 'kostas'";
+            Utilities.remoteExecution(slice, command);
+            command=prefix+"modprobe ath9k";
+            Utilities.remoteExecution(slice, command);
+            command=prefix+"ifconfig wlan0 up";
+            Utilities.remoteExecution(slice, command);
+            command=prefix+"ifconfig eth1 up";
+            Utilities.remoteExecution(slice, command);
+            command=prefix+"vconfig add eth1 "+parameters.get("vlan").toString();
+            Utilities.remoteExecution(slice, command);
+            command=prefix+"ip link set eth1."+parameters.get("vlan").toString()+" up";
+            Utilities.remoteExecution(slice, command);
+            command=prefix+"brctl addbr "+parameters.get("bridge").toString();
+            Utilities.remoteExecution(slice, command);
+            command=prefix+"brctl addif "+parameters.get("bridge").toString()+" eth1."+parameters.get("vlan").toString();
+            Utilities.remoteExecution(slice, command);
+            command=prefix+"ip link set up dev "+parameters.get("bridge").toString();
+            Utilities.remoteExecution(slice, command);
+            command=prefix+"ip link set up dev "+parameters.get("bridge").toString();
+            Utilities.remoteExecution(slice, command);
+            command=prefix+"ifconfig "+parameters.get("bridge").toString()+" "+parameters.get("address").toString()+" netmask "+parameters.get("netmask").toString();
+            Utilities.remoteExecution(slice, command);
+
+            jsonResponse="{\"node\":\""+node+"\",\"action\":\""+"networkConfiguration"+"\",\"status\":\""+"success"+"\"}";
+          
+           
+        } catch (Exception e) {
+            
+            System.out.println(e);
+            LOGGER.log(Level.INFO,e.toString());
+            
+            jsonResponse="{\"node\":\""+node+"\",\"action\":\""+"networkConfiguration"+"\",\"status\":\""+"failure"+"\"}";
+        }
+       return jsonResponse;
     }
 }
