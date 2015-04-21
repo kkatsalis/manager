@@ -29,7 +29,7 @@ import org.json.JSONObject;
  *
  * @author nitlab
  */
-@Path("/")
+@Path("")
 public class Node {
 
      
@@ -84,7 +84,7 @@ public class Node {
     @POST
     @Consumes("application/json")
     @Produces("application/json")
-    @Path("/network/node")
+    @Path("/node/network")
     public String postNetworkConfig(@QueryParam("name") String _nodeID,
                                     @QueryParam("slice") String _slice,
                                final NetworkConfig body) {
@@ -98,8 +98,13 @@ public class Node {
         parameters.put("bridge",body.bridge);
         parameters.put("driver",body.driver);
         
-        String jsonObj=Utilities.createNetworkConfig(_slice, _nodeID,parameters);
-        
+        Boolean status=false;
+        String jsonObj="";
+                
+        status=Utilities.prepareNodeNetwork(_slice, _nodeID);
+       
+        if(status)
+           jsonObj=Utilities.createNetworkConfig(_slice, _nodeID,parameters);
         
          return jsonObj;
     }

@@ -156,11 +156,8 @@ public class Utilities {
         String prefix="ssh -oStrictHostKeyChecking=no $h root@"+node+" ";
         
         try {
-          
-            command=prefix+"echo 'kostas'";
-            Utilities.remoteExecution(slice, command);
-            command=prefix+"modprobe ath9k";
-            Utilities.remoteExecution(slice, command);
+                      
+           
             command=prefix+"ifconfig wlan0 up";
             Utilities.remoteExecution(slice, command);
             command=prefix+"ifconfig eth1 up";
@@ -191,5 +188,36 @@ public class Utilities {
             jsonResponse="{\"node\":\""+node+"\",\"action\":\""+"networkConfiguration"+"\",\"status\":\""+"failure"+"\"}";
         }
        return jsonResponse;
+    }
+
+    static Boolean prepareNodeNetwork(String slice, String node) {
+     
+        String command="";
+        
+        String prefix="ssh -oStrictHostKeyChecking=no $h root@"+node+" ";
+        
+        try {
+          
+            command=prefix+"apt-get update";
+            Utilities.remoteExecution(slice, command);
+            command=prefix+"apt-get install vlan";
+            Utilities.remoteExecution(slice, command);
+            command=prefix+"modprobe 8021q";
+            Utilities.remoteExecution(slice, command);
+            command=prefix+"apt-get update";
+            Utilities.remoteExecution(slice, command);
+            command=prefix+"apt-get install bridge-utils";
+            Utilities.remoteExecution(slice, command);
+            command=prefix+"modprobe ath9k";
+            Utilities.remoteExecution(slice, command);
+        
+        }  catch (Exception e) {
+            
+            System.out.println(e);
+            LOGGER.log(Level.INFO,e.toString());
+          
+        }
+       return true;
+        
     }
 }
