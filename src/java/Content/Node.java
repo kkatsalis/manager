@@ -20,6 +20,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.xml.bind.annotation.XmlElement;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -87,7 +88,7 @@ public class Node {
     @Path("/node/network")
     public String postNetworkConfig(@QueryParam("name") String _nodeID,
                                     @QueryParam("slice") String _slice,
-                               final NetworkConfig body) {
+                               final NetworkParams body) {
         
         Hashtable<String,String> parameters=new Hashtable<>();
         
@@ -105,6 +106,34 @@ public class Node {
        
         if(status)
            jsonObj=Utilities.createNetworkConfig(_slice, _nodeID,parameters);
+        
+         return jsonObj;
+    }
+    
+    
+     @POST
+     @Consumes("application/json")
+     @Produces("application/json")
+     @Path("/node/ap")
+     public String postAccessPointConfig(@QueryParam("name") String _nodeID,
+                                    @QueryParam("slice") String _slice,
+                               final HostapdParams body) {
+        
+        Hashtable<String,String> parameters=new Hashtable<>();
+        
+        parameters.put("intrface",body.intrface);
+        parameters.put("bridge",body.bridge);
+        parameters.put("driver",body.driver);
+        parameters.put("ssid",body.ssid);
+        parameters.put("channel",body.channel);
+        parameters.put("hw_mode",body.hw_mode);
+        parameters.put("wmm_enabled",body.wmm_enabled);
+        parameters.put("ieee80211n",body.ieee80211n);
+        parameters.put("ht_capab",body.ht_capab);
+        
+        String jsonObj="";
+       
+         jsonObj=Utilities.createAccessPointConfig(_slice, _nodeID,parameters);
         
          return jsonObj;
     }

@@ -12,7 +12,10 @@ import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.Iterator;
+import java.util.List;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import javax.swing.text.html.HTML;
@@ -151,7 +154,7 @@ public class Utilities {
     public static String createNetworkConfig(String slice,String node, Hashtable<String,String> parameters){
     
         String command="";
-        String jsonResponse=" "; 
+        String jsonResponse="{\"node\":\""+node+"\",\"action\":\""+"networkConfiguration"+"\",\"status\":\""+"failure"+"\"}"; 
         
         String prefix="ssh -oStrictHostKeyChecking=no $h root@"+node+" ";
         
@@ -185,7 +188,7 @@ public class Utilities {
             System.out.println(e);
             LOGGER.log(Level.INFO,e.toString());
             
-            jsonResponse="{\"node\":\""+node+"\",\"action\":\""+"networkConfiguration"+"\",\"status\":\""+"failure"+"\"}";
+            
         }
        return jsonResponse;
     }
@@ -218,6 +221,74 @@ public class Utilities {
           
         }
        return true;
+        
+    }
+
+    static String createAccessPointConfig(String slice, String nodeID, Hashtable<String, String> parameters) {
+               
+//         parameters.put("intrface",body.intrface);
+//        parameters.put("address",body.bridge);
+//        parameters.put("netmask",body.driver);
+//        parameters.put("bridge",body.ssid);
+//        parameters.put("driver",body.channel);
+//        parameters.put("driver",body.hw_mode);
+//        parameters.put("driver",body.wmm_enabled);
+//        parameters.put("driver",body.ieee80211n);
+//        parameters.put("driver",body.ht_capab);
+        
+        
+        String command="";
+        String jsonResponse="{\"node\":\""+nodeID+"\",\"action\":\""+"networkConfiguration"+"\",\"status\":\""+"failure"+"\"}"; 
+        
+           
+        String prefix="ssh -oStrictHostKeyChecking=no $h root@"+nodeID+" ";
+        
+        List<String> lines=new ArrayList<String>();
+        lines.add("interface="+parameters.get("intrface").toString());
+        lines.add("bridge="+parameters.get("bridge").toString());
+        lines.add("driver="+parameters.get("driver").toString());
+        lines.add("ssid="+parameters.get("ssid").toString());
+        lines.add("channel="+parameters.get("channel").toString());
+        lines.add("hw_mode="+parameters.get("hw_mode").toString());
+        lines.add("wmm_enabled="+parameters.get("wmm_enabled").toString());
+        lines.add("ieee80211n="+parameters.get("ieee80211n").toString());
+        lines.add("ht_capab="+parameters.get("ht_capab").toString());
+          
+                
+        try {
+            command=prefix+"apt-get update";
+            Utilities.remoteExecution(slice, command);
+            
+            command=prefix+"apt-get install hostapd";
+            Utilities.remoteExecution(slice, command);
+            
+            command=prefix+"touch /etc/hostapd/hostapd.conf";
+            Utilities.remoteExecution(slice, command);
+            String string;
+            
+            for (Iterator<String> it = lines.iterator(); it.hasNext();) {
+                string = it.next();
+                command="echo "+string+" |"+prefix+" 'cat>>/etc/hostapd/hostapd.conf'";
+                Utilities.remoteExecution(slice, command);
+            }
+           
+           
+            command=prefix+"hostapd -d /etc/hostapd/hostapd.conf";
+            Utilities.remoteExecution(slice, command);
+            
+
+            jsonResponse="{\"node\":\""+nodeID+"\",\"action\":\""+"networkConfiguration"+"\",\"status\":\""+"success"+"\"}";
+          
+           
+        } catch (Exception e) {
+            
+            System.out.println(e);
+            LOGGER.log(Level.INFO,e.toString());
+            
+            
+        }
+       return jsonResponse;
+        
         
     }
 }

@@ -15,7 +15,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 
 @XmlRootElement
-public class NetworkConfig {
+public class NetworkParams {
     
     @XmlElement public String vlan;
     @XmlElement public String driver;
