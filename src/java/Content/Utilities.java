@@ -16,10 +16,11 @@ import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Properties;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import javax.swing.text.html.HTML;
-
+import java.io.InputStream;
 import org.apache.commons.io.IOUtils;
 
 import java.util.logging.Logger;
@@ -102,39 +103,85 @@ public class Utilities {
 
     public static String executeImageLoad(String slice,String node) throws IOException{
     
-     //OMF 5
-     //command="omf load -i baseline.ndz -t omf.nitos."+node;
-    String command ="omf6 load -t "+node+" -i baseline.ndz ";    
-    String response=Utilities.remoteExecution(slice,command);
-    String jsonResponse="";         
-             
-    if(response.toLowerCase().contains("Load proccess completed".toLowerCase()))
-       response="success";
-    else 
-       response="failure";
-             
-        jsonResponse="{\"node\":\""+node+"\",\"action\":\""+"imageLoad"+"\",\"status\":\""+response+"\"}";
+        String command;
+        String response;
+        String jsonResponse="";   
 
+        Properties property=new Properties();
+        String filename="manager.properties";
+        InputStream input=Utilities.class.getClassLoader().getResourceAsStream(filename);
+        property.load(input);
+
+        String framework=(String)property.getProperty("omf");
+
+         if(framework.equals("omf5")){
+            command="omf load -i baseline.ndz -t omf.nitos."+node;
+            response=Utilities.remoteExecution(slice,command);
+
+            if(response.toLowerCase().contains("node successfully imaged".toLowerCase()))
+               response="success";
+            else 
+               response="failure";
+
+            jsonResponse="{\"node\":\""+node+"\",\"action\":\""+"imageLoad"+"\",\"status\":\""+response+"\"}";
+         }
+         if(framework.equals("omf6")){
+           command ="omf6 load -t "+node+" -i baseline.ndz ";
+            response=Utilities.remoteExecution(slice,command);
+
+            if(response.toLowerCase().contains("Load proccess completed".toLowerCase()))
+               response="success";
+            else 
+               response="failure";
+
+            jsonResponse="{\"node\":\""+node+"\",\"action\":\""+"imageLoad"+"\",\"status\":\""+response+"\"}";
+         }
+    
              return jsonResponse;
     }    
 
-    public static String executeAction(String slice,String node, String action) throws IOException{
+    public static String cmExecuteAction(String slice,String node, String action) throws IOException{
     
-        String command="omf6 tell -a "+action+" -t "+node;
-        String jsonResponse="";           
-        String  response=Utilities.remoteExecution(slice,command);
-            
+        String command;
+        String response;
+        String jsonResponse="";   
+
+        Properties property=new Properties();
+        String filename="manager.properties";
+        InputStream input=Utilities.class.getClassLoader().getResourceAsStream(filename);
+        property.load(input);
+
+        String framework=(String)property.getProperty("omf");
+          
+       if(framework.equals("omf5")){
+        command="omf tell -a "+action+"-t omf.nitos."+node;
+        response=Utilities.remoteExecution(slice,command);
+        
+        if(response.toLowerCase().contains("".toLowerCase()))
+           response="success";
+        else 
+           response="failure";
+             
+        jsonResponse="{\"node\":\""+node+"\",\"action\":\""+"imageLoad"+"\",\"status\":\""+response+"\"}";
+     }
+     if(framework.equals("omf6")){
+       
+        command="omf6 tell -a "+action+" -t "+node;
+       
+        response=Utilities.remoteExecution(slice,command);
+        
         if(response.toLowerCase().contains("Proccess complete".toLowerCase()))
            response="success";
         else 
-            response="failure";
+           response="failure";
+             
+           jsonResponse="{\"node\":\""+node+"\",\"action\":\""+action+"\",\"status\":\""+response+"\"}";     
+     }
             
-            jsonResponse="{\"node\":\""+node+"\",\"action\":\""+action+"\",\"status\":\""+response+"\"}";
- 
             return jsonResponse;
     }
     
-    public static String findCMStatus(String slice,String node) throws IOException{
+    public static String cmStatus(String slice,String node) throws IOException{
     
            String command="omf6 stat -t "+node;
            String jsonResponse="";     
@@ -151,7 +198,38 @@ public class Utilities {
            return jsonResponse;
     }
 
-    public static String createNetworkConfig(String slice,String node, Hashtable<String,String> parameters){
+    static Boolean prepareNodeNetworkConfig(String slice, String node) {
+     
+        String command="";
+        
+        String prefix="ssh -oStrictHostKeyChecking=no $h root@"+node+" ";
+        
+        try {
+          
+            command=prefix+"apt-get update";
+            Utilities.remoteExecution(slice, command);
+            command=prefix+"apt-get install vlan";
+            Utilities.remoteExecution(slice, command);
+            command=prefix+"modprobe 8021q";
+            Utilities.remoteExecution(slice, command);
+            command=prefix+"apt-get update";
+            Utilities.remoteExecution(slice, command);
+            command=prefix+"apt-get install bridge-utils";
+            Utilities.remoteExecution(slice, command);
+            command=prefix+"modprobe ath9k";
+            Utilities.remoteExecution(slice, command);
+        
+        }  catch (Exception e) {
+            
+            System.out.println(e);
+            LOGGER.log(Level.INFO,e.toString());
+          
+        }
+       return true;
+        
+    }
+
+    public static String createNodeNetworkConfig(String slice,String node, Hashtable<String,String> parameters){
     
         String command="";
         String jsonResponse="{\"node\":\""+node+"\",\"action\":\""+"networkConfiguration"+"\",\"status\":\""+"failure"+"\"}"; 
@@ -193,50 +271,9 @@ public class Utilities {
        return jsonResponse;
     }
 
-    static Boolean prepareNodeNetwork(String slice, String node) {
-     
-        String command="";
-        
-        String prefix="ssh -oStrictHostKeyChecking=no $h root@"+node+" ";
-        
-        try {
-          
-            command=prefix+"apt-get update";
-            Utilities.remoteExecution(slice, command);
-            command=prefix+"apt-get install vlan";
-            Utilities.remoteExecution(slice, command);
-            command=prefix+"modprobe 8021q";
-            Utilities.remoteExecution(slice, command);
-            command=prefix+"apt-get update";
-            Utilities.remoteExecution(slice, command);
-            command=prefix+"apt-get install bridge-utils";
-            Utilities.remoteExecution(slice, command);
-            command=prefix+"modprobe ath9k";
-            Utilities.remoteExecution(slice, command);
-        
-        }  catch (Exception e) {
-            
-            System.out.println(e);
-            LOGGER.log(Level.INFO,e.toString());
-          
-        }
-       return true;
-        
-    }
-
+   
     static String createAccessPointConfig(String slice, String nodeID, Hashtable<String, String> parameters) {
                
-//         parameters.put("intrface",body.intrface);
-//        parameters.put("address",body.bridge);
-//        parameters.put("netmask",body.driver);
-//        parameters.put("bridge",body.ssid);
-//        parameters.put("driver",body.channel);
-//        parameters.put("driver",body.hw_mode);
-//        parameters.put("driver",body.wmm_enabled);
-//        parameters.put("driver",body.ieee80211n);
-//        parameters.put("driver",body.ht_capab);
-        
-        
         String command="";
         String jsonResponse="{\"node\":\""+nodeID+"\",\"action\":\""+"networkConfiguration"+"\",\"status\":\""+"failure"+"\"}"; 
         
@@ -256,12 +293,14 @@ public class Utilities {
           
                 
         try {
+            //STEP 1: Install hostapd
             command=prefix+"apt-get update";
             Utilities.remoteExecution(slice, command);
             
             command=prefix+"apt-get install hostapd";
             Utilities.remoteExecution(slice, command);
             
+             //STEP 2: Create hostapd file
             command=prefix+"touch /etc/hostapd/hostapd.conf";
             Utilities.remoteExecution(slice, command);
             String string;
@@ -272,8 +311,12 @@ public class Utilities {
                 Utilities.remoteExecution(slice, command);
             }
            
+           //STEP 3: Make Hostapd Service and run
+            String line="DAEMON_CONF=\"/etc/hostapd/hostapd.conf\"";
+            command="echo "+line+" |"+prefix+" 'cat>>/etc/default/hostapd'";
+            Utilities.remoteExecution(slice, command);
            
-            command=prefix+"hostapd -d /etc/hostapd/hostapd.conf";
+            command=prefix+"'service hostapd start'";
             Utilities.remoteExecution(slice, command);
             
 

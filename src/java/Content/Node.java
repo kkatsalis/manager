@@ -47,7 +47,7 @@ public class Node {
     @GET
     @Path("node")
     @Produces("application/json")
-    public String execNodeAction(@QueryParam("name") String _nodeID,
+    public String initializeNodeActions(@QueryParam("name") String _nodeID,
                                @QueryParam("action") String _action,
                                @QueryParam("slice") String _slice) {
        
@@ -58,15 +58,15 @@ public class Node {
      
         try {
             // Image load
-            if("imageload".equals(action.toLowerCase())){
+            if("loadimage".equals(action.toLowerCase())){
                 jsonResponse=Utilities.executeImageLoad(slice,nodeID);
             }
             // on/off/reset
             if("on".equals(action.toLowerCase())||"off".equals(action.toLowerCase())||"reset".equals(action.toLowerCase())){
-                jsonResponse=Utilities.executeAction(slice, nodeID, action);
+                jsonResponse=Utilities.cmExecuteAction(slice, nodeID, action);
              }
             if("status".equals(action.toLowerCase())){
-                jsonResponse=Utilities.findCMStatus(slice,nodeID);
+                jsonResponse=Utilities.cmStatus(slice,nodeID);
              }
          
         } catch (IOException ex) {
@@ -82,11 +82,37 @@ public class Node {
      * @return an HTTP response with content of the updated or created resource.
      */
    
+    
+    @GET
+    @Produces("text/plain")
+    @Path("/node/console")
+    public String getNodeConsole(@QueryParam("name") String _nodeID,
+                                 @QueryParam("slice") String _slice,
+                                 @QueryParam("command") String _command
+                               ) {
+        
+        String command="";
+        String response="";
+        String prefix="ssh -oStrictHostKeyChecking=no $h root@"+_nodeID+" ";
+        
+        command=prefix+"'"+_command+"'";
+               
+        
+        try {
+            response=Utilities.remoteExecution(_slice,command);
+        } catch (IOException ex) {
+            Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+         return response;
+    }
+    
+    
     @POST
     @Consumes("application/json")
     @Produces("application/json")
     @Path("/node/network")
-    public String postNetworkConfig(@QueryParam("name") String _nodeID,
+    public String postNodeNetworkConfig(@QueryParam("name") String _nodeID,
                                     @QueryParam("slice") String _slice,
                                final NetworkParams body) {
         
@@ -102,10 +128,10 @@ public class Node {
         Boolean status=false;
         String jsonObj="";
                 
-        status=Utilities.prepareNodeNetwork(_slice, _nodeID);
+        status=Utilities.prepareNodeNetworkConfig(_slice, _nodeID);
        
         if(status)
-           jsonObj=Utilities.createNetworkConfig(_slice, _nodeID,parameters);
+           jsonObj=Utilities.createNodeNetworkConfig(_slice, _nodeID,parameters);
         
          return jsonObj;
     }
