@@ -15,7 +15,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 
 @XmlRootElement
-public class NetworkParams {
+public class old_JsonVap {
     
     @XmlElement public String vlan;
     @XmlElement public String driver;

@@ -25,6 +25,10 @@ import org.apache.commons.io.IOUtils;
 
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+import javax.json.JsonArray;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 /**
  *
@@ -101,20 +105,18 @@ public class Utilities {
   
           }       //end main
 
-    public static String executeImageLoad(String slice,String node) throws IOException{
+    public static String executeImageLoad(String slice,String node, String omfVersion) throws IOException{
     
         String command;
         String response;
         String jsonResponse="";   
 
-        Properties property=new Properties();
-        String filename="manager.properties";
-        InputStream input=Utilities.class.getClassLoader().getResourceAsStream(filename);
-        property.load(input);
+//        Properties property=new Properties();
+//        String filename="manager.properties";
+//        InputStream input=Utilities.class.getClassLoader().getResourceAsStream(filename);
+//        property.load(input);
 
-        String framework=(String)property.getProperty("omf");
-
-         if(framework.equals("omf5")){
+         if(omfVersion.equals("omf5")){
             command="omf load -i baseline.ndz -t omf.nitos."+node;
             response=Utilities.remoteExecution(slice,command);
 
@@ -125,7 +127,7 @@ public class Utilities {
 
             jsonResponse="{\"node\":\""+node+"\",\"action\":\""+"imageLoad"+"\",\"status\":\""+response+"\"}";
          }
-         if(framework.equals("omf6")){
+         if(omfVersion.equals("omf6")){
            command ="omf6 load -t "+node+" -i baseline.ndz ";
             response=Utilities.remoteExecution(slice,command);
 
@@ -140,20 +142,20 @@ public class Utilities {
              return jsonResponse;
     }    
 
-    public static String cmExecuteAction(String slice,String node, String action) throws IOException{
+    public static String cmExecuteAction(String slice,String node, String action, String omf) throws IOException{
     
         String command;
         String response;
         String jsonResponse="";   
 
-        Properties property=new Properties();
-        String filename="manager.properties";
-        InputStream input=Utilities.class.getClassLoader().getResourceAsStream(filename);
-        property.load(input);
-
-        String framework=(String)property.getProperty("omf");
+//        Properties property=new Properties();
+//        String filename="manager.properties";
+//        InputStream input=Utilities.class.getClassLoader().getResourceAsStream(filename);
+//        property.load(input);
+//
+//        String framework=(String)property.getProperty("omf");
           
-       if(framework.equals("omf5")){
+     if(omf.equals("omf5")){
         command="omf tell -a "+action+"-t omf.nitos."+node;
         response=Utilities.remoteExecution(slice,command);
         
@@ -164,7 +166,10 @@ public class Utilities {
              
         jsonResponse="{\"node\":\""+node+"\",\"action\":\""+"imageLoad"+"\",\"status\":\""+response+"\"}";
      }
-     if(framework.equals("omf6")){
+     if(omf.equals("omf6")){
+       
+         if(action.equals("rebbot"))
+           action="reset";
        
         command="omf6 tell -a "+action+" -t "+node;
        
@@ -181,10 +186,18 @@ public class Utilities {
             return jsonResponse;
     }
     
-    public static String cmStatus(String slice,String node) throws IOException{
+    public static String cmStatus(String slice,String node, String omf) throws IOException{
     
+        String jsonResponse="";  
+        
+         if(omf.equals("omf5")){
+         jsonResponse="{\"node\":\""+node+"\",\"action\":\""+"nodeStatus"+"\",\"status\":\""+"not supported"+"\"}";
+          
+           return jsonResponse;
+         }
+         else if(omf.equals("omf6")){ 
+       
            String command="omf6 stat -t "+node;
-           String jsonResponse="";     
            
            String  response=remoteExecution(slice,command);
             
@@ -194,7 +207,7 @@ public class Utilities {
               response="off";
             
            jsonResponse="{\"node\":\""+node+"\",\"action\":\""+"nodeStatus"+"\",\"status\":\""+response+"\"}";
-          
+         }
            return jsonResponse;
     }
 
@@ -332,6 +345,65 @@ public class Utilities {
         }
        return jsonResponse;
         
+    }
+    
+    static public List<String> parseHostApdConfig(JSONObject body){
+    
+        JsonHostApd hostApd=new JsonHostApd();
+        List<String> hostApdLines=new ArrayList<String>();
+        
+        try {
+         
+            hostApd.setChannel(body.getInt("channel"));
+            hostApd.setHw_mode(body.getString("hw_mode"));
+            hostApd.setDriver(body.getString("driver"));
+            hostApd.setWmm_enabled(body.getInt("wmm_enabled"));
+            hostApd.setIeee80211n(body.getInt("ieee80211n"));
+            hostApd.setBeacon_int(body.getInt("beacon_int"));
+            hostApd.setMax_num_sta(body.getInt("max_num_sta"));
+            hostApd.setHt_capab(body.getString("ht_capab"));
+        
+            hostApdLines.add("channel="+String.valueOf(hostApd.getChannel()));
+            hostApdLines.add("hw_mode="+String.valueOf(hostApd.getHw_mode()));
+            hostApdLines.add("driver="+String.valueOf(hostApd.getDriver()));
+            hostApdLines.add("wmm_enabled="+String.valueOf(hostApd.getWmm_enabled()));
+            hostApdLines.add("ieee80211n="+String.valueOf(hostApd.getIeee80211n()));
+            hostApdLines.add("beacon_int="+String.valueOf(hostApd.getBeacon_int()));
+            hostApdLines.add("ht_capab="+String.valueOf(hostApd.getHt_capab()));
+            
+            if(hostApdLines.isEmpty())
+                return null;
+            
+        } catch (JSONException ex) {
+            Logger.getLogger(Utilities.class.getName()).log(Level.SEVERE, null, ex);
+        }
+       
+        return hostApdLines;
         
     }
+    
+    static public List<String> parseVapsConfig(JSONObject body) throws JSONException{
+    
+        List<JsonVap> vaps=new ArrayList<JsonVap>();
+        List<String> vapsLines=new ArrayList<String>();
+     
+        JSONArray vapArray=body.getJSONArray("virtual-access-points");
+        
+        
+        
+        
+        return vapsLines;
+        
+    }
+    
+    public List<String> parseQosConfig(JSONObject body){
+    
+       JsonApQoSParams qos=new JsonApQoSParams();
+       List<String> qosLines=new ArrayList<String>();
+     
+        
+        return qosLines;
+        
+    }
+    
 }

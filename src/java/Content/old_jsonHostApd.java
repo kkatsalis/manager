@@ -13,7 +13,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  *
  * @author nitlab
  */
-public class HostapdParams {
+public class old_jsonHostApd {
     
     
     @XmlElement public String intrface;
@@ -27,3 +27,5 @@ public class HostapdParams {
     @XmlElement public String ht_capab;
 
 }
+
+
