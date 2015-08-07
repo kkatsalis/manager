@@ -28,7 +28,7 @@ public double wmm_ac_vi_aifs=2;
 public double wmm_ac_vi_cwmin=3;
 public double wmm_ac_vi_cwmax=4;
 public double wmm_ac_vi_txop_limit=94;
-public double nwmm_ac_vi_acm=0;
+public double wmm_ac_vi_acm=0;
 
 public double wmm_ac_vo_aifs=2;
 public double wmm_ac_vo_cwmin=2;
@@ -168,12 +168,12 @@ public double tx_queue_data0_burst=1.5;
         this.wmm_ac_vi_txop_limit = wmm_ac_vi_txop_limit;
     }
 
-    public double getNwmm_ac_vi_acm() {
-        return nwmm_ac_vi_acm;
+    public double getWmm_ac_vi_acm() {
+        return wmm_ac_vi_acm;
     }
 
-    public void setNwmm_ac_vi_acm(double nwmm_ac_vi_acm) {
-        this.nwmm_ac_vi_acm = nwmm_ac_vi_acm;
+    public void setWmm_ac_vi_acm(double nwmm_ac_vi_acm) {
+        this.wmm_ac_vi_acm = nwmm_ac_vi_acm;
     }
 
     public double getWmm_ac_vo_aifs() {

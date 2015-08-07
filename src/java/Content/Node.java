@@ -159,6 +159,8 @@ public class Node {
           JSONObject body=new JSONObject(_body);
           
           List<String> hostApdLines=Utilities.parseHostApdConfig(body);
+          List<String> apQoSLines=Utilities.parseApQosConfig(body);
+          
           List<String> vapLines=Utilities.parseVapsConfig(body);
                
           

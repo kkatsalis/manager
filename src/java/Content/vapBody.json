@@ -21,7 +21,7 @@
 "wmm_ac_vi_cwmin":"3",
 "wmm_ac_vi_cwmax":"4",
 "wmm_ac_vi_txop_limit":"94",
-"nwmm_ac_vi_acm":"0",
+"wmm_ac_vi_acm":"0",
 "wmm_ac_vo_aifs":"2",
 "wmm_ac_vo_cwmin":"2",
 "wmm_ac_vo_cwmax":"3",
@@ -48,30 +48,36 @@
       "id":"0", 
       "ssid":"vodafone",
       "password":"test",
+      "max-customers":"10",
       "network":"192.168.2.0",
       "netmask":"255.255.255.0",
       "vlan":"692",
       "max-rate":"1024",
+      "min-rate":"1",
       "ratio-rate": "0.2"
     },  
     {
       "id":"1", 
        "ssid":"wind",
       "password":"test-b",
+      "max-customers":"20",
       "network":"192.168.3.0",
       "netmask":"255.255.255.0",
       "vlan":"50",
       "max-rate":"1024",
+      "min-rate":"1",
       "ratio-rate": "0.2"
     },  
     {
      "id":"2", 
       "ssid":"cosmote",
       "password":"katsalis",
+      "max-customers":"20",
       "network":"192.168.5.0",
       "netmask":"255.255.255.0",
       "vlan":"51",
       "max-rate":"1024",
+      "min-rate":"1",
       "ratio-rate": "0.2"
     }
 ]

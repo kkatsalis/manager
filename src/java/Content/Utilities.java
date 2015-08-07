@@ -168,7 +168,7 @@ public class Utilities {
      }
      if(omf.equals("omf6")){
        
-         if(action.equals("rebbot"))
+         if(action.equals("reboot"))
            action="reset";
        
         command="omf6 tell -a "+action+" -t "+node;
@@ -206,7 +206,7 @@ public class Utilities {
            else 
               response="off";
             
-           jsonResponse="{\"node\":\""+node+"\",\"action\":\""+"nodeStatus"+"\",\"status\":\""+response+"\"}";
+           jsonResponse="{\"node\":\""+node+"\",\"action\":\""+"status"+"\",\"status\":\""+response+"\"}";
          }
            return jsonResponse;
     }
@@ -388,19 +388,136 @@ public class Utilities {
         List<String> vapsLines=new ArrayList<String>();
      
         JSONArray vapArray=body.getJSONArray("virtual-access-points");
+        int vap_number=vapArray.length();
+        JSONObject vap ;
         
-        
-        
+        for (int i = 0; i < vap_number; ++i) {
+            vap = vapArray.getJSONObject(i);
+            vaps.add(new JsonVap());
+           
+            vaps.get(i).setId(i);
+            vaps.get(i).setVlan(vap.getInt("vlan"));
+            vaps.get(i).setMax_customers(vap.getInt("max-customers"));
+            vaps.get(i).setMax_rate(vap.getDouble("max-rate"));
+            vaps.get(i).setMin_rate(vap.getDouble("min-rate"));
+            vaps.get(i).setRatio_rate(vap.getDouble("ratio-rate"));
+            vaps.get(i).setSsid(vap.getString("ssid"));
+            vaps.get(i).setPassword(vap.getString("password"));
+            vaps.get(i).setNetwork(vap.getString("network"));  
+            vaps.get(i).setNetMask(vap.getString("netmask"));  
+ 
+            
+        }
+             
         
         return vapsLines;
         
     }
     
-    public List<String> parseQosConfig(JSONObject body){
+    public static List<String> parseApQosConfig(JSONObject body){
     
-       JsonApQoSParams qos=new JsonApQoSParams();
+       JsonApQoSParams qosObject=new JsonApQoSParams();
        List<String> qosLines=new ArrayList<String>();
-     
+       
+        try {
+        
+            qosObject.setWmm_ac_bk_cwmin(body.getDouble("wmm_ac_bk_cwmin"));
+            qosObject.setWmm_ac_bk_cwmax(body.getDouble("wmm_ac_bk_cwmax"));
+            qosObject.setWmm_ac_bk_aifs(body.getDouble("wmm_ac_bk_aifs"));
+            qosObject.setWmm_ac_bk_txop_limit(body.getDouble("wmm_ac_bk_txop_limit"));
+            qosObject.setWmm_ac_bk_acm(body.getDouble("wmm_ac_bk_acm"));
+
+            qosObject.setWmm_ac_be_aifs(body.getDouble("wmm_ac_be_aifs"));
+            qosObject.setWmm_ac_be_cwmin(body.getDouble("wmm_ac_be_cwmin"));
+            qosObject.setWmm_ac_be_cwmax(body.getDouble("wmm_ac_be_cwmax"));
+            qosObject.setWmm_ac_be_txop_limit(body.getDouble("wmm_ac_be_txop_limit"));
+            qosObject.setWmm_ac_be_acm(body.getDouble("wmm_ac_be_acm"));
+
+            qosObject.setWmm_ac_vi_aifs(body.getDouble("wmm_ac_vi_aifs"));
+            qosObject.setWmm_ac_vi_cwmin(body.getDouble("wmm_ac_vi_cwmin"));
+            qosObject.setWmm_ac_vi_cwmax(body.getDouble("wmm_ac_vi_cwmax"));
+            qosObject.setWmm_ac_vi_txop_limit(body.getDouble("wmm_ac_vi_txop_limit"));
+            qosObject.setWmm_ac_vi_acm(body.getDouble("wmm_ac_vi_acm"));
+
+            qosObject.setWmm_ac_vo_aifs(body.getDouble("wmm_ac_vo_aifs"));
+            qosObject.setWmm_ac_vo_cwmin(body.getDouble("wmm_ac_vo_cwmin"));
+            qosObject.setWmm_ac_vo_cwmax(body.getDouble("wmm_ac_vo_cwmax"));
+            qosObject.setWmm_ac_vo_txop_limit(body.getDouble("wmm_ac_vo_txop_limit"));
+            qosObject.setWmm_ac_vo_acm(body.getDouble("wmm_ac_vo_acm"));
+
+            qosObject.setTx_queue_data3_aifs(body.getDouble("tx_queue_data3_aifs"));
+            qosObject.setTx_queue_data3_cwmin(body.getDouble("tx_queue_data3_cwmin"));
+            qosObject.setTx_queue_data3_cwmax(body.getDouble("tx_queue_data3_cwmax"));
+            qosObject.setTx_queue_data3_burst(body.getDouble("tx_queue_data3_burst"));
+
+            qosObject.setTx_queue_data2_aifs(body.getDouble("tx_queue_data2_aifs"));
+            qosObject.setTx_queue_data2_cwmin(body.getDouble("tx_queue_data2_cwmin"));
+            qosObject.setTx_queue_data2_cwmax(body.getDouble("tx_queue_data2_cwmax"));
+            qosObject.setTx_queue_data2_burst(body.getDouble("tx_queue_data2_burst"));
+
+            qosObject.setTx_queue_data1_aifs(body.getDouble("tx_queue_data1_aifs"));
+            qosObject.setTx_queue_data1_cwmin(body.getDouble("tx_queue_data1_cwmin"));
+            qosObject.setTx_queue_data1_cwmax(body.getDouble("tx_queue_data1_cwmax"));
+            qosObject.setTx_queue_data1_burst(body.getDouble("tx_queue_data1_burst"));
+
+            qosObject.setTx_queue_data0_aifs(body.getDouble("tx_queue_data0_aifs"));
+            qosObject.setTx_queue_data0_cwmin(body.getDouble("tx_queue_data0_cwmin"));
+            qosObject.setTx_queue_data0_cwmax(body.getDouble("tx_queue_data0_cwmax"));
+            qosObject.setTx_queue_data0_burst(body.getDouble("tx_queue_data0_burst"));
+       
+             ///////////// Lines
+            
+            qosLines.add("wmm_ac_bk_cwmin="+String.valueOf(qosObject.getWmm_ac_bk_cwmin()));
+            qosLines.add("wmm_ac_bk_cwmax="+String.valueOf(qosObject.getWmm_ac_bk_cwmax()));
+            qosLines.add("wmm_ac_bk_aifs="+String.valueOf(qosObject.getWmm_ac_bk_aifs()));
+            qosLines.add("wmm_ac_bk_txop_limit="+String.valueOf(qosObject.getWmm_ac_bk_txop_limit()));
+            qosLines.add("wmm_ac_bk_acm="+String.valueOf(qosObject.getWmm_ac_bk_acm()));
+
+            qosLines.add("wmm_ac_be_aifs="+String.valueOf(qosObject.getWmm_ac_be_aifs()));
+            qosLines.add("wmm_ac_be_cwmin="+String.valueOf(qosObject.getWmm_ac_be_cwmin()));
+            qosLines.add("wmm_ac_be_cwmax="+String.valueOf(qosObject.getWmm_ac_be_cwmax()));
+            qosLines.add("wmm_ac_be_txop_limit="+String.valueOf(qosObject.getWmm_ac_be_txop_limit()));
+            qosLines.add("wmm_ac_be_acm="+String.valueOf(qosObject.getWmm_ac_be_acm()));
+
+            qosLines.add("wmm_ac_vi_aifs="+String.valueOf(qosObject.getWmm_ac_vi_aifs()));
+            qosLines.add("wmm_ac_vi_cwmin="+String.valueOf(qosObject.getWmm_ac_vi_cwmin()));
+            qosLines.add("wmm_ac_vi_cwmax="+String.valueOf(qosObject.getWmm_ac_vi_cwmax()));
+            qosLines.add("wmm_ac_vi_txop_limit="+String.valueOf(qosObject.getWmm_ac_vi_txop_limit()));
+            qosLines.add("wmm_ac_vi_acm="+String.valueOf(qosObject.getWmm_ac_vi_acm()));
+
+            qosLines.add("wmm_ac_vo_aifs="+String.valueOf(qosObject.getWmm_ac_vo_aifs()));
+            qosLines.add("wmm_ac_vo_cwmin="+String.valueOf(qosObject.getWmm_ac_vo_cwmin()));
+            qosLines.add("wmm_ac_vo_cwmax="+String.valueOf(qosObject.getWmm_ac_vo_cwmax()));
+            qosLines.add("wmm_ac_vo_txop_limit="+String.valueOf(qosObject.getWmm_ac_vo_txop_limit()));
+            qosLines.add("wmm_ac_vo_acm="+String.valueOf(qosObject.getWmm_ac_vo_acm()));
+
+            qosLines.add("tx_queue_data3_aifs="+String.valueOf(qosObject.getTx_queue_data3_aifs()));
+            qosLines.add("tx_queue_data3_cwmin="+String.valueOf(qosObject.getTx_queue_data3_cwmin()));
+            qosLines.add("tx_queue_data3_cwmax="+String.valueOf(qosObject.getTx_queue_data3_cwmax()));
+            qosLines.add("tx_queue_data3_burst="+String.valueOf(qosObject.getTx_queue_data3_burst()));
+
+            qosLines.add("tx_queue_data2_aifs="+String.valueOf(qosObject.getTx_queue_data2_aifs()));
+            qosLines.add("tx_queue_data2_cwmin="+String.valueOf(qosObject.getTx_queue_data2_cwmin()));
+            qosLines.add("tx_queue_data2_cwmax="+String.valueOf(qosObject.getTx_queue_data2_cwmax()));
+            qosLines.add("tx_queue_data2_burst="+String.valueOf(qosObject.getTx_queue_data2_burst()));
+
+            qosLines.add("tx_queue_data1_aifs="+String.valueOf(qosObject.getTx_queue_data1_aifs()));
+            qosLines.add("tx_queue_data1_cwmin="+String.valueOf(qosObject.getTx_queue_data1_cwmin()));
+            qosLines.add("tx_queue_data1_cwmax="+String.valueOf(qosObject.getTx_queue_data1_cwmax()));
+            qosLines.add("tx_queue_data1_burst="+String.valueOf(qosObject.getTx_queue_data1_burst()));
+
+            qosLines.add("tx_queue_data0_aifs="+String.valueOf(qosObject.getTx_queue_data0_aifs()));
+            qosLines.add("tx_queue_data0_cwmin="+String.valueOf(qosObject.getTx_queue_data0_cwmin()));
+            qosLines.add("tx_queue_data0_cwmax="+String.valueOf(qosObject.getTx_queue_data0_cwmax()));
+            qosLines.add("tx_queue_data0_burst="+String.valueOf(qosObject.getTx_queue_data0_burst()));
+            
+            
+            if(qosLines.isEmpty())
+                return null;
+            
+       } catch (JSONException ex) {
+            Logger.getLogger(Utilities.class.getName()).log(Level.SEVERE, null, ex);
+        }
         
         return qosLines;
         
