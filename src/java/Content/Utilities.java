@@ -211,9 +211,11 @@ public class Utilities {
            return jsonResponse;
     }
 
-    static Boolean prepareNodeNetworkConfig(String slice, String node) {
+    static Hashtable prepareNodeLibraries(String slice, String node) {
      
         String command="";
+        
+        Hashtable response=new Hashtable();
         
         String prefix="ssh -oStrictHostKeyChecking=no $h root@"+node+" ";
         
@@ -221,16 +223,22 @@ public class Utilities {
           
             command=prefix+"apt-get update";
             Utilities.remoteExecution(slice, command);
+            
+            // install libraries
             command=prefix+"apt-get install vlan";
-            Utilities.remoteExecution(slice, command);
-            command=prefix+"modprobe 8021q";
-            Utilities.remoteExecution(slice, command);
-            command=prefix+"apt-get update";
             Utilities.remoteExecution(slice, command);
             command=prefix+"apt-get install bridge-utils";
             Utilities.remoteExecution(slice, command);
+            command=prefix+"apt-get install hostapd";
+            Utilities.remoteExecution(slice, command);
+           
+            //modprobes
             command=prefix+"modprobe ath9k";
             Utilities.remoteExecution(slice, command);
+            command=prefix+"modprobe 8021q";
+            Utilities.remoteExecution(slice, command);
+                       
+            response.put("librariesAdded","yes");
         
         }  catch (Exception e) {
             
@@ -238,40 +246,56 @@ public class Utilities {
             LOGGER.log(Level.INFO,e.toString());
           
         }
-       return true;
         
+        return response;
     }
 
-    public static String createNodeNetworkConfig(String slice,String node, Hashtable<String,String> parameters){
+    public static Hashtable createNodeNetworkConfig(String slice,String node, JsonHostApd hostApd,List<JsonVap> vaps){
     
         String command="";
-        String jsonResponse="{\"node\":\""+node+"\",\"action\":\""+"networkConfiguration"+"\",\"status\":\""+"failure"+"\"}"; 
+        Hashtable responseParams=new Hashtable();
         
         String prefix="ssh -oStrictHostKeyChecking=no $h root@"+node+" ";
         
         try {
                       
-           
             command=prefix+"ifconfig wlan0 up";
             Utilities.remoteExecution(slice, command);
             command=prefix+"ifconfig eth1 up";
             Utilities.remoteExecution(slice, command);
-            command=prefix+"vconfig add eth1 "+parameters.get("vlan").toString();
-            Utilities.remoteExecution(slice, command);
-            command=prefix+"ip link set eth1."+parameters.get("vlan").toString()+" up";
-            Utilities.remoteExecution(slice, command);
-            command=prefix+"brctl addbr "+parameters.get("bridge").toString();
-            Utilities.remoteExecution(slice, command);
-            command=prefix+"brctl addif "+parameters.get("bridge").toString()+" eth1."+parameters.get("vlan").toString();
-            Utilities.remoteExecution(slice, command);
-            command=prefix+"ip link set up dev "+parameters.get("bridge").toString();
-            Utilities.remoteExecution(slice, command);
-            command=prefix+"ip link set up dev "+parameters.get("bridge").toString();
-            Utilities.remoteExecution(slice, command);
-            command=prefix+"ifconfig "+parameters.get("bridge").toString()+" "+parameters.get("address").toString()+" netmask "+parameters.get("netmask").toString();
-            Utilities.remoteExecution(slice, command);
+            
+            for(int i=0;i<vaps.size();i++){
+                
+                //step 1 - add the neccessary bridges
+                command=prefix+"brctl addbr br"+String.valueOf(i);
+                Utilities.remoteExecution(slice, command);
+                
+                //step 2 - add vlans on the eth1 interface
+                if(vaps.get(i).getVlan()>0){
+                    command=prefix+"vconfig add eth1 "+String.valueOf(vaps.get(i).getVlan());
+                    Utilities.remoteExecution(slice, command);
 
-            jsonResponse="{\"node\":\""+node+"\",\"action\":\""+"networkConfiguration"+"\",\"status\":\""+"success"+"\"}";
+                     command=prefix+"ip link set eth1."+String.valueOf(vaps.get(i).getVlan())+" up";
+                     Utilities.remoteExecution(slice, command);
+                }
+                       
+                // step 3 - bring up all the bridges   
+                command=prefix+"ip link set up dev br"+String.valueOf(i);
+                Utilities.remoteExecution(slice, command);
+                command=prefix+"ifconfig br"+String.valueOf(i)+" "+vaps.get(i).getNetwork()+" netmask "+vaps.get(i).getNetMask();
+                Utilities.remoteExecution(slice, command);
+                   
+            }
+            
+            for(int i=0;i<vaps.size();i++){
+                if(i==0&vaps.get(i).getVlan()<0)
+                   command=prefix+"brctl addif br"+String.valueOf(i)+" eth1";
+                else
+                   command=prefix+"brctl addif br"+String.valueOf(i)+" eth1."+String.valueOf(vaps.get(i).getVlan());
+               
+                Utilities.remoteExecution(slice, command);
+            }
+
           
            
         } catch (Exception e) {
@@ -281,44 +305,29 @@ public class Utilities {
             
             
         }
-       return jsonResponse;
+       return responseParams;
     }
 
-   
-    static String createAccessPointConfig(String slice, String nodeID, Hashtable<String, String> parameters) {
+    static Hashtable loadAndStartHostApdService(String slice, String nodeID, List<String> hostApdlines) {
                
         String command="";
-        String jsonResponse="{\"node\":\""+nodeID+"\",\"action\":\""+"networkConfiguration"+"\",\"status\":\""+"failure"+"\"}"; 
+        Hashtable response=new Hashtable(); 
         
            
         String prefix="ssh -oStrictHostKeyChecking=no $h root@"+nodeID+" ";
-        
-        List<String> lines=new ArrayList<String>();
-        lines.add("interface="+parameters.get("intrface").toString());
-        lines.add("bridge="+parameters.get("bridge").toString());
-        lines.add("driver="+parameters.get("driver").toString());
-        lines.add("ssid="+parameters.get("ssid").toString());
-        lines.add("channel="+parameters.get("channel").toString());
-        lines.add("hw_mode="+parameters.get("hw_mode").toString());
-        lines.add("wmm_enabled="+parameters.get("wmm_enabled").toString());
-        lines.add("ieee80211n="+parameters.get("ieee80211n").toString());
-        lines.add("ht_capab="+parameters.get("ht_capab").toString());
-          
                 
         try {
-            //STEP 1: Install hostapd
-            command=prefix+"apt-get update";
+             // Create hostapd file
+            command=prefix+"rm /etc/hostapd/hostapd.conf";
             Utilities.remoteExecution(slice, command);
             
-            command=prefix+"apt-get install hostapd";
-            Utilities.remoteExecution(slice, command);
-            
-             //STEP 2: Create hostapd file
             command=prefix+"touch /etc/hostapd/hostapd.conf";
             Utilities.remoteExecution(slice, command);
+
+            // Add Lines to the hostapd file
             String string;
             
-            for (Iterator<String> it = lines.iterator(); it.hasNext();) {
+            for (Iterator<String> it = hostApdlines.iterator(); it.hasNext();) {
                 string = it.next();
                 command="echo "+string+" |"+prefix+" 'cat>>/etc/hostapd/hostapd.conf'";
                 Utilities.remoteExecution(slice, command);
@@ -328,12 +337,13 @@ public class Utilities {
             String line="DAEMON_CONF=\"/etc/hostapd/hostapd.conf\"";
             command="echo "+line+" |"+prefix+" 'cat>>/etc/default/hostapd'";
             Utilities.remoteExecution(slice, command);
-           
+            response.put("hostApdServiceCreated", "yes");
+            
             command=prefix+"'service hostapd start'";
             Utilities.remoteExecution(slice, command);
-            
+            response.put("hostApdServiceStarted", "yes");
 
-            jsonResponse="{\"node\":\""+nodeID+"\",\"action\":\""+"networkConfiguration"+"\",\"status\":\""+"success"+"\"}";
+           
           
            
         } catch (Exception e) {
@@ -343,184 +353,322 @@ public class Utilities {
             
             
         }
-       return jsonResponse;
+       return response;
         
     }
     
-    static public List<String> parseHostApdConfig(JSONObject body){
+    static public JsonHostApd parseHostApdConfig(JSONObject body){
     
         JsonHostApd hostApd=new JsonHostApd();
-        List<String> hostApdLines=new ArrayList<String>();
         
         try {
          
             hostApd.setChannel(body.getInt("channel"));
             hostApd.setHw_mode(body.getString("hw_mode"));
             hostApd.setDriver(body.getString("driver"));
-            hostApd.setWmm_enabled(body.getInt("wmm_enabled"));
-            hostApd.setIeee80211n(body.getInt("ieee80211n"));
-            hostApd.setBeacon_int(body.getInt("beacon_int"));
             hostApd.setMax_num_sta(body.getInt("max_num_sta"));
-            hostApd.setHt_capab(body.getString("ht_capab"));
-        
-            hostApdLines.add("channel="+String.valueOf(hostApd.getChannel()));
-            hostApdLines.add("hw_mode="+String.valueOf(hostApd.getHw_mode()));
-            hostApdLines.add("driver="+String.valueOf(hostApd.getDriver()));
-            hostApdLines.add("wmm_enabled="+String.valueOf(hostApd.getWmm_enabled()));
-            hostApdLines.add("ieee80211n="+String.valueOf(hostApd.getIeee80211n()));
-            hostApdLines.add("beacon_int="+String.valueOf(hostApd.getBeacon_int()));
-            hostApdLines.add("ht_capab="+String.valueOf(hostApd.getHt_capab()));
-            
-            if(hostApdLines.isEmpty())
-                return null;
             
         } catch (JSONException ex) {
             Logger.getLogger(Utilities.class.getName()).log(Level.SEVERE, null, ex);
         }
        
-        return hostApdLines;
+        return hostApd;
         
     }
     
-    static public List<String> parseVapsConfig(JSONObject body) throws JSONException{
+    static public List<JsonVap> parseVapsConfig(JSONObject body) throws JSONException{
     
         List<JsonVap> vaps=new ArrayList<JsonVap>();
-        List<String> vapsLines=new ArrayList<String>();
-     
+        List<JsonApQoSParams> vaps_qos=new ArrayList<JsonApQoSParams>();
+        
         JSONArray vapArray=body.getJSONArray("virtual-access-points");
         int vap_number=vapArray.length();
         JSONObject vap ;
         
         for (int i = 0; i < vap_number; ++i) {
             vap = vapArray.getJSONObject(i);
+            
             vaps.add(new JsonVap());
            
             vaps.get(i).setId(i);
+            vaps.get(i).setSsid(vap.getString("ssid"));
+            vaps.get(i).setPassword(vap.getString("password"));
             vaps.get(i).setVlan(vap.getInt("vlan"));
-            vaps.get(i).setMax_customers(vap.getInt("max-customers"));
+            vaps.get(i).setNetwork(vap.getString("network"));  
+            vaps.get(i).setNetMask(vap.getString("netmask")); 
             vaps.get(i).setMax_rate(vap.getDouble("max-rate"));
             vaps.get(i).setMin_rate(vap.getDouble("min-rate"));
             vaps.get(i).setRatio_rate(vap.getDouble("ratio-rate"));
-            vaps.get(i).setSsid(vap.getString("ssid"));
-            vaps.get(i).setPassword(vap.getString("password"));
-            vaps.get(i).setNetwork(vap.getString("network"));  
-            vaps.get(i).setNetMask(vap.getString("netmask"));  
- 
+            vaps.get(i).setBeacon_int(vap.getInt("beacon_int"));
+            vaps.get(i).setMax_num_sta(vap.getInt("max_num_sta"));
+            
+            vaps.get(i).setWmm_enabled(vap.getInt("wmm_enabled"));
+            vaps.get(i).setIeee80211n(vap.getInt("ieee80211n"));
+            vaps.get(i).setHt_capab(vap.getString("ht_capab"));
+          
+            if(vap.has("wmm_ac_bk_cwmin")){
+                vaps.get(i).createQoSparameters();
+                vaps.get(i).getQosParameters().setWmm_ac_bk_cwmin(vap.getDouble("wmm_ac_bk_cwmin"));
+                vaps.get(i).getQosParameters().setWmm_ac_bk_cwmax(vap.getDouble("wmm_ac_bk_cwmax"));
+                vaps.get(i).getQosParameters().setWmm_ac_bk_aifs(vap.getDouble("wmm_ac_bk_aifs"));
+                vaps.get(i).getQosParameters().setWmm_ac_bk_txop_limit(vap.getDouble("wmm_ac_bk_txop_limit"));
+                vaps.get(i).getQosParameters().setWmm_ac_bk_acm(vap.getDouble("wmm_ac_bk_acm"));
+
+                vaps.get(i).getQosParameters().setWmm_ac_be_aifs(vap.getDouble("wmm_ac_be_aifs"));
+                vaps.get(i).getQosParameters().setWmm_ac_be_cwmin(vap.getDouble("wmm_ac_be_cwmin"));
+                vaps.get(i).getQosParameters().setWmm_ac_be_cwmax(vap.getDouble("wmm_ac_be_cwmax"));
+                vaps.get(i).getQosParameters().setWmm_ac_be_txop_limit(vap.getDouble("wmm_ac_be_txop_limit"));
+                vaps.get(i).getQosParameters().setWmm_ac_be_acm(vap.getDouble("wmm_ac_be_acm"));
+
+                vaps.get(i).getQosParameters().setWmm_ac_vi_aifs(vap.getDouble("wmm_ac_vi_aifs"));
+                vaps.get(i).getQosParameters().setWmm_ac_vi_cwmin(vap.getDouble("wmm_ac_vi_cwmin"));
+                vaps.get(i).getQosParameters().setWmm_ac_vi_cwmax(vap.getDouble("wmm_ac_vi_cwmax"));
+                vaps.get(i).getQosParameters().setWmm_ac_vi_txop_limit(vap.getDouble("wmm_ac_vi_txop_limit"));
+                vaps.get(i).getQosParameters().setWmm_ac_vi_acm(vap.getDouble("wmm_ac_vi_acm"));
+
+                vaps.get(i).getQosParameters().setWmm_ac_vo_aifs(vap.getDouble("wmm_ac_vo_aifs"));
+                vaps.get(i).getQosParameters().setWmm_ac_vo_cwmin(vap.getDouble("wmm_ac_vo_cwmin"));
+                vaps.get(i).getQosParameters().setWmm_ac_vo_cwmax(vap.getDouble("wmm_ac_vo_cwmax"));
+                vaps.get(i).getQosParameters().setWmm_ac_vo_txop_limit(vap.getDouble("wmm_ac_vo_txop_limit"));
+                vaps.get(i).getQosParameters().setWmm_ac_vo_acm(vap.getDouble("wmm_ac_vo_acm"));
+
+                vaps.get(i).getQosParameters().setTx_queue_data3_aifs(vap.getDouble("tx_queue_data3_aifs"));
+                vaps.get(i).getQosParameters().setTx_queue_data3_cwmin(vap.getDouble("tx_queue_data3_cwmin"));
+                vaps.get(i).getQosParameters().setTx_queue_data3_cwmax(vap.getDouble("tx_queue_data3_cwmax"));
+                vaps.get(i).getQosParameters().setTx_queue_data3_burst(vap.getDouble("tx_queue_data3_burst"));
+
+                vaps.get(i).getQosParameters().setTx_queue_data2_aifs(vap.getDouble("tx_queue_data2_aifs"));
+                vaps.get(i).getQosParameters().setTx_queue_data2_cwmin(vap.getDouble("tx_queue_data2_cwmin"));
+                vaps.get(i).getQosParameters().setTx_queue_data2_cwmax(vap.getDouble("tx_queue_data2_cwmax"));
+                vaps.get(i).getQosParameters().setTx_queue_data2_burst(vap.getDouble("tx_queue_data2_burst"));
+
+                vaps.get(i).getQosParameters().setTx_queue_data1_aifs(vap.getDouble("tx_queue_data1_aifs"));
+                vaps.get(i).getQosParameters().setTx_queue_data1_cwmin(vap.getDouble("tx_queue_data1_cwmin"));
+                vaps.get(i).getQosParameters().setTx_queue_data1_cwmax(vap.getDouble("tx_queue_data1_cwmax"));
+                vaps.get(i).getQosParameters().setTx_queue_data1_burst(vap.getDouble("tx_queue_data1_burst"));
+
+                vaps.get(i).getQosParameters().setTx_queue_data0_aifs(vap.getDouble("tx_queue_data0_aifs"));
+                vaps.get(i).getQosParameters().setTx_queue_data0_cwmin(vap.getDouble("tx_queue_data0_cwmin"));
+                vaps.get(i).getQosParameters().setTx_queue_data0_cwmax(vap.getDouble("tx_queue_data0_cwmax"));
+                vaps.get(i).getQosParameters().setTx_queue_data0_burst(vap.getDouble("tx_queue_data0_burst"));
+            
+            }
             
         }
-             
         
-        return vapsLines;
+         return vaps;
         
     }
     
-    public static List<String> parseApQosConfig(JSONObject body){
+    public static List<String> exportHostApdLines(String slice, String nodeID,JsonHostApd hostApd,List<JsonVap> vaps){
     
-       JsonApQoSParams qosObject=new JsonApQoSParams();
-       List<String> qosLines=new ArrayList<String>();
-       
-        try {
+        List<String> hostApdLines=new ArrayList<String>();
+    
         
-            qosObject.setWmm_ac_bk_cwmin(body.getDouble("wmm_ac_bk_cwmin"));
-            qosObject.setWmm_ac_bk_cwmax(body.getDouble("wmm_ac_bk_cwmax"));
-            qosObject.setWmm_ac_bk_aifs(body.getDouble("wmm_ac_bk_aifs"));
-            qosObject.setWmm_ac_bk_txop_limit(body.getDouble("wmm_ac_bk_txop_limit"));
-            qosObject.setWmm_ac_bk_acm(body.getDouble("wmm_ac_bk_acm"));
+        
+        if(vaps.size()>1)
+           hostApdLines.add("bssid="+getBSSID(slice,nodeID));
+        
+        hostApdLines.add("channel="+String.valueOf(hostApd.getChannel()));
+        hostApdLines.add("hw_mode="+String.valueOf(hostApd.getHw_mode()));
+        hostApdLines.add("driver="+String.valueOf(hostApd.getDriver()));
 
-            qosObject.setWmm_ac_be_aifs(body.getDouble("wmm_ac_be_aifs"));
-            qosObject.setWmm_ac_be_cwmin(body.getDouble("wmm_ac_be_cwmin"));
-            qosObject.setWmm_ac_be_cwmax(body.getDouble("wmm_ac_be_cwmax"));
-            qosObject.setWmm_ac_be_txop_limit(body.getDouble("wmm_ac_be_txop_limit"));
-            qosObject.setWmm_ac_be_acm(body.getDouble("wmm_ac_be_acm"));
-
-            qosObject.setWmm_ac_vi_aifs(body.getDouble("wmm_ac_vi_aifs"));
-            qosObject.setWmm_ac_vi_cwmin(body.getDouble("wmm_ac_vi_cwmin"));
-            qosObject.setWmm_ac_vi_cwmax(body.getDouble("wmm_ac_vi_cwmax"));
-            qosObject.setWmm_ac_vi_txop_limit(body.getDouble("wmm_ac_vi_txop_limit"));
-            qosObject.setWmm_ac_vi_acm(body.getDouble("wmm_ac_vi_acm"));
-
-            qosObject.setWmm_ac_vo_aifs(body.getDouble("wmm_ac_vo_aifs"));
-            qosObject.setWmm_ac_vo_cwmin(body.getDouble("wmm_ac_vo_cwmin"));
-            qosObject.setWmm_ac_vo_cwmax(body.getDouble("wmm_ac_vo_cwmax"));
-            qosObject.setWmm_ac_vo_txop_limit(body.getDouble("wmm_ac_vo_txop_limit"));
-            qosObject.setWmm_ac_vo_acm(body.getDouble("wmm_ac_vo_acm"));
-
-            qosObject.setTx_queue_data3_aifs(body.getDouble("tx_queue_data3_aifs"));
-            qosObject.setTx_queue_data3_cwmin(body.getDouble("tx_queue_data3_cwmin"));
-            qosObject.setTx_queue_data3_cwmax(body.getDouble("tx_queue_data3_cwmax"));
-            qosObject.setTx_queue_data3_burst(body.getDouble("tx_queue_data3_burst"));
-
-            qosObject.setTx_queue_data2_aifs(body.getDouble("tx_queue_data2_aifs"));
-            qosObject.setTx_queue_data2_cwmin(body.getDouble("tx_queue_data2_cwmin"));
-            qosObject.setTx_queue_data2_cwmax(body.getDouble("tx_queue_data2_cwmax"));
-            qosObject.setTx_queue_data2_burst(body.getDouble("tx_queue_data2_burst"));
-
-            qosObject.setTx_queue_data1_aifs(body.getDouble("tx_queue_data1_aifs"));
-            qosObject.setTx_queue_data1_cwmin(body.getDouble("tx_queue_data1_cwmin"));
-            qosObject.setTx_queue_data1_cwmax(body.getDouble("tx_queue_data1_cwmax"));
-            qosObject.setTx_queue_data1_burst(body.getDouble("tx_queue_data1_burst"));
-
-            qosObject.setTx_queue_data0_aifs(body.getDouble("tx_queue_data0_aifs"));
-            qosObject.setTx_queue_data0_cwmin(body.getDouble("tx_queue_data0_cwmin"));
-            qosObject.setTx_queue_data0_cwmax(body.getDouble("tx_queue_data0_cwmax"));
-            qosObject.setTx_queue_data0_burst(body.getDouble("tx_queue_data0_burst"));
+        
+        return hostApdLines;
+    }
+    
+    public static List<String> exportVapsLines(List<JsonVap> vaps){
+    
+       List<String> lines=new ArrayList<String>();
        
-             ///////////// Lines
+             // QoS Lines
+            for (int i = 0; i < vaps.size(); ++i) {
+                if(i==0){
+                    lines.add("interface=wlan0"); //Used by default by VAP 1
+                }
+                else if(i>0){
+                    lines.add("bss=wlan0_"+(i-1));
+                }
+                lines.add("bridge=br"+i);
+                lines.add("ssid="+String.valueOf(vaps.get(i).getSsid()));
+               // lines.add("password="+String.valueOf(vaps.get(i).getPassword()));
+                lines.add("beacon_int="+String.valueOf(vaps.get(i).getBeacon_int()));
+                lines.add("max_num_sta="+String.valueOf(vaps.get(i).getMax_num_sta()));
+                lines.add("wmm_enabled="+String.valueOf(vaps.get(i).getWmm_enabled()));
+                lines.add("ieee80211n="+String.valueOf(vaps.get(i).getIeee80211n()));
+                lines.add("ht_capab="+String.valueOf(vaps.get(i).getHt_capab()));
+                
+                if(vaps.get(i).getQosParameters()!=null){
+                    
+                    lines.add("wmm_ac_bk_cwmin="+String.valueOf(vaps.get(i).getQosParameters().getWmm_ac_bk_cwmin()));
+                    lines.add("wmm_ac_bk_cwmax="+String.valueOf(vaps.get(i).getQosParameters().getWmm_ac_bk_cwmax()));
+                    lines.add("wmm_ac_bk_aifs="+String.valueOf(vaps.get(i).getQosParameters().getWmm_ac_bk_aifs()));
+                    lines.add("wmm_ac_bk_txop_limit="+String.valueOf(vaps.get(i).getQosParameters().getWmm_ac_bk_txop_limit()));
+                    lines.add("wmm_ac_bk_acm="+String.valueOf(vaps.get(i).getQosParameters().getWmm_ac_bk_acm()));
+
+                    lines.add("wmm_ac_be_aifs="+String.valueOf(vaps.get(i).getQosParameters().getWmm_ac_be_aifs()));
+                    lines.add("wmm_ac_be_cwmin="+String.valueOf(vaps.get(i).getQosParameters().getWmm_ac_be_cwmin()));
+                    lines.add("wmm_ac_be_cwmax="+String.valueOf(vaps.get(i).getQosParameters().getWmm_ac_be_cwmax()));
+                    lines.add("wmm_ac_be_txop_limit="+String.valueOf(vaps.get(i).getQosParameters().getWmm_ac_be_txop_limit()));
+                    lines.add("wmm_ac_be_acm="+String.valueOf(vaps.get(i).getQosParameters().getWmm_ac_be_acm()));
+
+                    lines.add("wmm_ac_vi_aifs="+String.valueOf(vaps.get(i).getQosParameters().getWmm_ac_vi_aifs()));
+                    lines.add("wmm_ac_vi_cwmin="+String.valueOf(vaps.get(i).getQosParameters().getWmm_ac_vi_cwmin()));
+                    lines.add("wmm_ac_vi_cwmax="+String.valueOf(vaps.get(i).getQosParameters().getWmm_ac_vi_cwmax()));
+                    lines.add("wmm_ac_vi_txop_limit="+String.valueOf(vaps.get(i).getQosParameters().getWmm_ac_vi_txop_limit()));
+                    lines.add("wmm_ac_vi_acm="+String.valueOf(vaps.get(i).getQosParameters().getWmm_ac_vi_acm()));
+
+                    lines.add("wmm_ac_vo_aifs="+String.valueOf(vaps.get(i).getQosParameters().getWmm_ac_vo_aifs()));
+                    lines.add("wmm_ac_vo_cwmin="+String.valueOf(vaps.get(i).getQosParameters().getWmm_ac_vo_cwmin()));
+                    lines.add("wmm_ac_vo_cwmax="+String.valueOf(vaps.get(i).getQosParameters().getWmm_ac_vo_cwmax()));
+                    lines.add("wmm_ac_vo_txop_limit="+String.valueOf(vaps.get(i).getQosParameters().getWmm_ac_vo_txop_limit()));
+                    lines.add("wmm_ac_vo_acm="+String.valueOf(vaps.get(i).getQosParameters().getWmm_ac_vo_acm()));
+
+                    lines.add("tx_queue_data3_aifs="+String.valueOf(vaps.get(i).getQosParameters().getTx_queue_data3_aifs()));
+                    lines.add("tx_queue_data3_cwmin="+String.valueOf(vaps.get(i).getQosParameters().getTx_queue_data3_cwmin()));
+                    lines.add("tx_queue_data3_cwmax="+String.valueOf(vaps.get(i).getQosParameters().getTx_queue_data3_cwmax()));
+                    lines.add("tx_queue_data3_burst="+String.valueOf(vaps.get(i).getQosParameters().getTx_queue_data3_burst()));
+
+                    lines.add("tx_queue_data2_aifs="+String.valueOf(vaps.get(i).getQosParameters().getTx_queue_data2_aifs()));
+                    lines.add("tx_queue_data2_cwmin="+String.valueOf(vaps.get(i).getQosParameters().getTx_queue_data2_cwmin()));
+                    lines.add("tx_queue_data2_cwmax="+String.valueOf(vaps.get(i).getQosParameters().getTx_queue_data2_cwmax()));
+                    lines.add("tx_queue_data2_burst="+String.valueOf(vaps.get(i).getQosParameters().getTx_queue_data2_burst()));
+
+                    lines.add("tx_queue_data1_aifs="+String.valueOf(vaps.get(i).getQosParameters().getTx_queue_data1_aifs()));
+                    lines.add("tx_queue_data1_cwmin="+String.valueOf(vaps.get(i).getQosParameters().getTx_queue_data1_cwmin()));
+                    lines.add("tx_queue_data1_cwmax="+String.valueOf(vaps.get(i).getQosParameters().getTx_queue_data1_cwmax()));
+                    lines.add("tx_queue_data1_burst="+String.valueOf(vaps.get(i).getQosParameters().getTx_queue_data1_burst()));
+
+                    lines.add("tx_queue_data0_aifs="+String.valueOf(vaps.get(i).getQosParameters().getTx_queue_data0_aifs()));
+                    lines.add("tx_queue_data0_cwmin="+String.valueOf(vaps.get(i).getQosParameters().getTx_queue_data0_cwmin()));
+                    lines.add("tx_queue_data0_cwmax="+String.valueOf(vaps.get(i).getQosParameters().getTx_queue_data0_cwmax()));
+                    lines.add("tx_queue_data0_burst="+String.valueOf(vaps.get(i).getQosParameters().getTx_queue_data0_burst()));
+                
+                }
+            }
             
-            qosLines.add("wmm_ac_bk_cwmin="+String.valueOf(qosObject.getWmm_ac_bk_cwmin()));
-            qosLines.add("wmm_ac_bk_cwmax="+String.valueOf(qosObject.getWmm_ac_bk_cwmax()));
-            qosLines.add("wmm_ac_bk_aifs="+String.valueOf(qosObject.getWmm_ac_bk_aifs()));
-            qosLines.add("wmm_ac_bk_txop_limit="+String.valueOf(qosObject.getWmm_ac_bk_txop_limit()));
-            qosLines.add("wmm_ac_bk_acm="+String.valueOf(qosObject.getWmm_ac_bk_acm()));
-
-            qosLines.add("wmm_ac_be_aifs="+String.valueOf(qosObject.getWmm_ac_be_aifs()));
-            qosLines.add("wmm_ac_be_cwmin="+String.valueOf(qosObject.getWmm_ac_be_cwmin()));
-            qosLines.add("wmm_ac_be_cwmax="+String.valueOf(qosObject.getWmm_ac_be_cwmax()));
-            qosLines.add("wmm_ac_be_txop_limit="+String.valueOf(qosObject.getWmm_ac_be_txop_limit()));
-            qosLines.add("wmm_ac_be_acm="+String.valueOf(qosObject.getWmm_ac_be_acm()));
-
-            qosLines.add("wmm_ac_vi_aifs="+String.valueOf(qosObject.getWmm_ac_vi_aifs()));
-            qosLines.add("wmm_ac_vi_cwmin="+String.valueOf(qosObject.getWmm_ac_vi_cwmin()));
-            qosLines.add("wmm_ac_vi_cwmax="+String.valueOf(qosObject.getWmm_ac_vi_cwmax()));
-            qosLines.add("wmm_ac_vi_txop_limit="+String.valueOf(qosObject.getWmm_ac_vi_txop_limit()));
-            qosLines.add("wmm_ac_vi_acm="+String.valueOf(qosObject.getWmm_ac_vi_acm()));
-
-            qosLines.add("wmm_ac_vo_aifs="+String.valueOf(qosObject.getWmm_ac_vo_aifs()));
-            qosLines.add("wmm_ac_vo_cwmin="+String.valueOf(qosObject.getWmm_ac_vo_cwmin()));
-            qosLines.add("wmm_ac_vo_cwmax="+String.valueOf(qosObject.getWmm_ac_vo_cwmax()));
-            qosLines.add("wmm_ac_vo_txop_limit="+String.valueOf(qosObject.getWmm_ac_vo_txop_limit()));
-            qosLines.add("wmm_ac_vo_acm="+String.valueOf(qosObject.getWmm_ac_vo_acm()));
-
-            qosLines.add("tx_queue_data3_aifs="+String.valueOf(qosObject.getTx_queue_data3_aifs()));
-            qosLines.add("tx_queue_data3_cwmin="+String.valueOf(qosObject.getTx_queue_data3_cwmin()));
-            qosLines.add("tx_queue_data3_cwmax="+String.valueOf(qosObject.getTx_queue_data3_cwmax()));
-            qosLines.add("tx_queue_data3_burst="+String.valueOf(qosObject.getTx_queue_data3_burst()));
-
-            qosLines.add("tx_queue_data2_aifs="+String.valueOf(qosObject.getTx_queue_data2_aifs()));
-            qosLines.add("tx_queue_data2_cwmin="+String.valueOf(qosObject.getTx_queue_data2_cwmin()));
-            qosLines.add("tx_queue_data2_cwmax="+String.valueOf(qosObject.getTx_queue_data2_cwmax()));
-            qosLines.add("tx_queue_data2_burst="+String.valueOf(qosObject.getTx_queue_data2_burst()));
-
-            qosLines.add("tx_queue_data1_aifs="+String.valueOf(qosObject.getTx_queue_data1_aifs()));
-            qosLines.add("tx_queue_data1_cwmin="+String.valueOf(qosObject.getTx_queue_data1_cwmin()));
-            qosLines.add("tx_queue_data1_cwmax="+String.valueOf(qosObject.getTx_queue_data1_cwmax()));
-            qosLines.add("tx_queue_data1_burst="+String.valueOf(qosObject.getTx_queue_data1_burst()));
-
-            qosLines.add("tx_queue_data0_aifs="+String.valueOf(qosObject.getTx_queue_data0_aifs()));
-            qosLines.add("tx_queue_data0_cwmin="+String.valueOf(qosObject.getTx_queue_data0_cwmin()));
-            qosLines.add("tx_queue_data0_cwmax="+String.valueOf(qosObject.getTx_queue_data0_cwmax()));
-            qosLines.add("tx_queue_data0_burst="+String.valueOf(qosObject.getTx_queue_data0_burst()));
-            
-            
-            if(qosLines.isEmpty())
+            if(lines.isEmpty())
                 return null;
-            
-       } catch (JSONException ex) {
-            Logger.getLogger(Utilities.class.getName()).log(Level.SEVERE, null, ex);
-        }
         
-        return qosLines;
+        return lines;
         
     }
+
+    static Hashtable mergeHashtables(Hashtable responseParameters, Hashtable libResponse, Hashtable netResponse, Hashtable hostapdServiceResponse) {
+        
+        Hashtable response=new Hashtable();
+        
+        response.putAll(responseParameters);
+        response.putAll(libResponse);
+        response.putAll(netResponse);
+        response.putAll(hostapdServiceResponse);
+        
+        return response;
+    }
+
+    static String createJsonResponse(Hashtable response) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    private static String getBSSID(String _slice,String _nodeID) {
+      
+        String command="";
+        String commandB="ifconfig wlan0 |grep -o \"HWaddr ..:..:..:..:..:..\"";
+        String response="";
+        String prefix="ssh -oStrictHostKeyChecking=no $h root@"+_nodeID+" ";
+        
+        command=prefix+"'"+commandB+"'";
+        
+        try {
+            response=Utilities.remoteExecution(_slice,command);
+        } catch (IOException ex) {
+            Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        return response;
+    }
     
+    static Hashtable loadInterfacesFile(String slice, String nodeID, List<JsonVap> vaps) {
+               
+        String command="";
+        String string="";
+        Hashtable response=new Hashtable(); 
+        
+           
+        String prefix="ssh -oStrictHostKeyChecking=no $h root@"+nodeID+" ";
+                
+        try {
+             if(vaps.size()>1){
+            command=prefix+"rm /etc/network/interfaces";
+            Utilities.remoteExecution(slice, command);
+            
+            command=prefix+"touch /etc/network/interfaces";
+            Utilities.remoteExecution(slice, command);
+
+            
+            // Add Lines to the interfaces file
+            // line 1
+            string="auto lo wlan0";
+                 for (int i = 0; i < vaps.size(); i++) {
+                   string+=" eth"+i+" "+"br"+i;  
+                     
+                 }
+            command="echo "+string+" |"+prefix+" 'cat>>/etc/network/interfaces'";
+            Utilities.remoteExecution(slice, command);
+            
+            // line 2
+            string="iface lo inet loopback";
+            command="echo "+string+" |"+prefix+" 'cat>>/etc/network/interfaces'";
+            Utilities.remoteExecution(slice, command);
+            // line 3
+            string="iface eth0 inet dhcp";
+            command="echo "+string+" |"+prefix+" 'cat>>/etc/network/interfaces'";
+            Utilities.remoteExecution(slice, command);
+            
+            List<String> lines;
+            
+            for (int i = 0; i < vaps.size(); i++) {
+                  lines=new ArrayList<>();
+            
+                  lines.add("iface br"+String.valueOf(i)+"inet manual");
+                 
+                  if(i==0)
+                     lines.add("\t\tbridge_ports wlan0 inet manual");
+                  else 
+                     lines.add("\t\tbridge_ports wlan0_"+String.valueOf(i-1)+"inet manual");
+                  
+                  lines.add("\t\tbridge_stp on");
+                  lines.add("\t\tmaxwait 10");
+
+                  
+                for (Iterator<String> it = lines.iterator(); it.hasNext();) {
+                    string = it.next();
+                    command="echo "+string+" |"+prefix+" 'cat>>/etc/network/interfaces'";
+                    Utilities.remoteExecution(slice, command);
+                }
+               
+                string = "";
+                command="echo "+string+" |"+prefix+" 'cat>>/etc/network/interfaces'";
+                Utilities.remoteExecution(slice, command);
+            }
+           
+           //STEP 3: Make Hostapd Service and run
+          
+           
+            
+            response.put("interfacesFileCreated", "yes");
+
+           
+             }
+           
+        } catch (Exception e) {
+            
+            System.out.println(e);
+            LOGGER.log(Level.INFO,e.toString());
+            
+            
+        }
+       return response;
+        
+    }
 }

@@ -49,7 +49,7 @@
       "ssid":"vodafone",
       "password":"test",
       "max-customers":"10",
-      "network":"192.168.2.0",
+      "network":"192.168.2.100",
       "netmask":"255.255.255.0",
       "vlan":"692",
       "max-rate":"1024",

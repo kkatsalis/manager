@@ -18,11 +18,18 @@ public class JsonVap {
     public String network;
     public String netMask;
     public int vlan;
-    public int max_customers;
     public double max_rate;
     public double min_rate;
     public double ratio_rate;
 
+    public int wmm_enabled;
+    public int ieee80211n;
+    public int beacon_int;
+    public int max_num_sta;
+    public String ht_capab;
+
+    public JsonApQoSParams qosParameters;
+    
     public int getId() {
         return id;
     }
@@ -71,15 +78,7 @@ public class JsonVap {
         this.vlan = vlan;
     }
 
-    public int getMax_customers() {
-        return max_customers;
-    }
-
-    public void setMax_customers(int max_customers) {
-        this.max_customers = max_customers;
-    }
-
-    public double getMax_rate() {
+     public double getMax_rate() {
         return max_rate;
     }
 
@@ -102,8 +101,58 @@ public class JsonVap {
     public void setRatio_rate(double ratio_rate) {
         this.ratio_rate = ratio_rate;
     }
+
+    public int getWmm_enabled() {
+        return wmm_enabled;
+    }
+
+    public void setWmm_enabled(int wmm_enabled) {
+        this.wmm_enabled = wmm_enabled;
+    }
+
+    public int getIeee80211n() {
+        return ieee80211n;
+    }
+
+    public void setIeee80211n(int ieee80211n) {
+        this.ieee80211n = ieee80211n;
+    }
+
+    public int getBeacon_int() {
+        return beacon_int;
+    }
+
+    public void setBeacon_int(int beacon_int) {
+        this.beacon_int = beacon_int;
+    }
+
+    public int getMax_num_sta() {
+        return max_num_sta;
+    }
+
+    public void setMax_num_sta(int max_num_sta) {
+        this.max_num_sta = max_num_sta;
+    }
+
+    public String getHt_capab() {
+        return ht_capab;
+    }
+
+    public void setHt_capab(String ht_capab) {
+        this.ht_capab = ht_capab;
+    }
+
+    public JsonApQoSParams getQosParameters() {
+        return qosParameters;
+    }
+
+    public void setQosParameters(JsonApQoSParams qosParameters) {
+        this.qosParameters = qosParameters;
+    }
     
-    
+    public void createQoSparameters(){
+     this.qosParameters=new JsonApQoSParams();
+    }
     
     
 }

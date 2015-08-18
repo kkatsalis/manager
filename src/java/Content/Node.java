@@ -9,6 +9,7 @@ package Content;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -152,22 +153,83 @@ public class Node {
      public String vapConfig(@QueryParam("nodeID") String _nodeID,
                              @QueryParam("slice") String _slice, String _body) {
        
-         String jsonObj="";
-        
+         Hashtable responseParameters=new Hashtable();
+         Hashtable libResponse=null;
+         Hashtable netResponse=null;
+         Hashtable hostapdServiceResponse=null;
+         
+         responseParameters.put("nodeID", _nodeID);
+         responseParameters.put("slice", _slice);
+         
          try {
         
           JSONObject body=new JSONObject(_body);
           
-          List<String> hostApdLines=Utilities.parseHostApdConfig(body);
-          List<String> apQoSLines=Utilities.parseApQosConfig(body);
+          // STEP 0: Install necessary libraries
+          libResponse=Utilities.prepareNodeLibraries(_slice,_nodeID);  
           
-          List<String> vapLines=Utilities.parseVapsConfig(body);
-               
+          if(!libResponse.isEmpty())
+              responseParameters.put("librariesLoaded", "ok");
+          else
+              responseParameters.put("librariesLoaded", "error");
+          
+          // STEP 1: Parse hostapd 
+          JsonHostApd hostApd=Utilities.parseHostApdConfig(body);
+          List<JsonVap> vaps=Utilities.parseVapsConfig(body);
+          
+          if(hostApd!=null&vaps!=null)
+             responseParameters.put("parsingHostApd", "ok");
+           else
+             responseParameters.put("parsingHostApd", "error");
+          
+           // STEP 2: Load the Network Configuration 
+          netResponse=Utilities.createNodeNetworkConfig(_slice,_nodeID,hostApd,vaps);
+         
+          if(!netResponse.isEmpty())
+             responseParameters.put("createNodeNetworkConfig", "ok");
+          else
+             responseParameters.put("createNodeNetworkConfig", "error");
+       
+          
+          // STEP 3: Parse and create Configuration Lines for the HostApd File
+          List<String> configLines=new ArrayList<String>();  
+          String line;
+           
+          
+          // 3.1 Prepare hostapd lines
+          List<String> lines_hostApd=Utilities.exportHostApdLines(_slice,_nodeID,hostApd,vaps);
+          
+             for (Iterator<String> it = lines_hostApd.iterator(); it.hasNext();) {
+                line = it.next();
+                configLines.add(line);
+            }
+         
+          // 3.2 Add vaps lines
+          
+          List<String> lines_vaps=Utilities.exportVapsLines(vaps);
+          
+          for (Iterator<String> it = lines_vaps.iterator(); it.hasNext();) {
+                line = it.next();
+                configLines.add(line);
+            }
+          
+          if(configLines.isEmpty())
+              responseParameters.put("hostApdLinesCreated", "no");
+          else
+              responseParameters.put("hostApdLinesCreated", "yes"); 
+         
+        // STEP 4: Load the HostApd file and start the Service
+        hostapdServiceResponse=Utilities.loadAndStartHostApdService(_slice,_nodeID, configLines);
           
         } catch (JSONException ex) {
             Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
         }
-        return jsonObj;
+        
+       Hashtable response=Utilities.mergeHashtables(responseParameters,libResponse,netResponse,hostapdServiceResponse);  
+       String jsonResponse=Utilities.createJsonResponse(response);
+         
+         
+         return jsonResponse;
     }
     
 }
