@@ -228,7 +228,7 @@ public class Node {
         }
         
        Hashtable response=NodeUtilities.mergeHashtables(responseParameters,libResponse,netResponse,hostapdServiceResponse);  
-       String jsonResponse=NodeUtilities.createJsonResponse(response);
+       String jsonResponse=NodeUtilities.createJsonResponse(_nodeID,response);
          
          
          return jsonResponse;

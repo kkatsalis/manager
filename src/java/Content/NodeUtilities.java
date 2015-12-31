@@ -569,10 +569,13 @@ public class NodeUtilities {
         return response;
     }
 
-    static String createJsonResponse(Hashtable response) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
+    static String createJsonResponse(String node,Hashtable response) {
+    
+        //to fix better
+        String jsonResponse="{\"node\":\""+node+"\",\"action\":\""+"VAP configuration"+"\",\"status\":\""+"finished"+"\"}";    
 
+    return jsonResponse;
+    }
     private static String getBSSIDTemp(String _slice,String _nodeID) {
       
         String command="";

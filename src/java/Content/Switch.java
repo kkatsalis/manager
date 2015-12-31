@@ -71,10 +71,7 @@ public class Switch {
         
           JSONObject body=new JSONObject(_body);
 
-          
-          
-         
-                  jsonResponse=NodeUtilities.createJsonResponse(responseParameters);
+          jsonResponse=NodeUtilities.createJsonResponse("",responseParameters);
 
         } catch (JSONException ex) {
             Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
