@@ -34,9 +34,9 @@ import org.json.JSONObject;
  *
  * @author nitlab
  */
-public class Utilities {
+public class NodeUtilities {
     
-    private final static Logger LOGGER = Logger.getLogger(Utilities.class.getName()); 
+    private final static Logger LOGGER = Logger.getLogger(NodeUtilities.class.getName()); 
   
     
     public static String remoteExecution(String slice,String command) throws IOException{
@@ -47,7 +47,7 @@ public class Utilities {
         // This block configure the logger with handler and formatter  
         LOGGER.setLevel(Level.ALL);
         FileHandler fh;
-        fh = new FileHandler("manager.log");  
+        fh = new FileHandler("node-manager.log");  
         LOGGER.addHandler(fh);
         SimpleFormatter formatter = new SimpleFormatter();  
         fh.setFormatter(formatter);   
@@ -55,7 +55,6 @@ public class Utilities {
         try{
             
              JSch jsch=new JSch();
-
             
              Session session=jsch.getSession(slice, address, 22);
 
@@ -65,7 +64,7 @@ public class Utilities {
    // If two machines have SSH passwordless logins setup, the following line is not needed:
              //    session.setPassword("YOURPASSWORD");
                 session.setConfig("StrictHostKeyChecking", "no");
-                 session.connect();
+                session.connect();
 
 
                  Channel channel=session.openChannel("exec");
@@ -105,20 +104,21 @@ public class Utilities {
   
           }       //end main
 
-    public static String executeImageLoad(String slice,String node, String omfVersion) throws IOException{
+    public static String executeImageLoad(String slice,String node, String omfVersion, String imageName) throws IOException{
     
         String command;
         String response;
         String jsonResponse="";   
-
+        String image="/var/lib/omf-images-5.4/"+imageName+".ndz";
+         image=imageName+".ndz";
 //        Properties property=new Properties();
 //        String filename="manager.properties";
-//        InputStream input=Utilities.class.getClassLoader().getResourceAsStream(filename);
+//        InputStream input=NodeUtilities.class.getClassLoader().getResourceAsStream(filename);
 //        property.load(input);
 
          if(omfVersion.equals("omf5")){
-            command="omf load -i baseline.ndz -t omf.nitos."+node;
-            response=Utilities.remoteExecution(slice,command);
+            command="omf load -i "+image+" -t omf.nitos."+node;
+            response=NodeUtilities.remoteExecution(slice,command);
 
             if(response.toLowerCase().contains("node successfully imaged".toLowerCase()))
                response="success";
@@ -128,8 +128,8 @@ public class Utilities {
             jsonResponse="{\"node\":\""+node+"\",\"action\":\""+"imageLoad"+"\",\"status\":\""+response+"\"}";
          }
          if(omfVersion.equals("omf6")){
-           command ="omf6 load -t "+node+" -i baseline.ndz ";
-            response=Utilities.remoteExecution(slice,command);
+           command ="omf6 load -t "+node+" -i "+imageName+".ndz";
+            response=NodeUtilities.remoteExecution(slice,command);
 
             if(response.toLowerCase().contains("Load proccess completed".toLowerCase()))
                response="success";
@@ -150,14 +150,14 @@ public class Utilities {
 
 //        Properties property=new Properties();
 //        String filename="manager.properties";
-//        InputStream input=Utilities.class.getClassLoader().getResourceAsStream(filename);
+//        InputStream input=NodeUtilities.class.getClassLoader().getResourceAsStream(filename);
 //        property.load(input);
 //
 //        String framework=(String)property.getProperty("omf");
           
      if(omf.equals("omf5")){
         command="omf tell -a "+action+"-t omf.nitos."+node;
-        response=Utilities.remoteExecution(slice,command);
+        response=NodeUtilities.remoteExecution(slice,command);
         
         if(response.toLowerCase().contains("".toLowerCase()))
            response="success";
@@ -173,7 +173,7 @@ public class Utilities {
        
         command="omf6 tell -a "+action+" -t "+node;
        
-        response=Utilities.remoteExecution(slice,command);
+        response=NodeUtilities.remoteExecution(slice,command);
         
         if(response.toLowerCase().contains("Proccess complete".toLowerCase()))
            response="success";
@@ -222,21 +222,21 @@ public class Utilities {
         try {
           
             command=prefix+"apt-get update";
-            Utilities.remoteExecution(slice, command);
+            NodeUtilities.remoteExecution(slice, command);
             
             // install libraries
             command=prefix+"apt-get install vlan";
-            Utilities.remoteExecution(slice, command);
+            NodeUtilities.remoteExecution(slice, command);
             command=prefix+"apt-get install bridge-utils";
-            Utilities.remoteExecution(slice, command);
+            NodeUtilities.remoteExecution(slice, command);
             command=prefix+"apt-get install hostapd";
-            Utilities.remoteExecution(slice, command);
+            NodeUtilities.remoteExecution(slice, command);
            
             //modprobes
             command=prefix+"modprobe ath9k";
-            Utilities.remoteExecution(slice, command);
+            NodeUtilities.remoteExecution(slice, command);
             command=prefix+"modprobe 8021q";
-            Utilities.remoteExecution(slice, command);
+            NodeUtilities.remoteExecution(slice, command);
                        
             response.put("librariesAdded","yes");
         
@@ -250,7 +250,7 @@ public class Utilities {
         return response;
     }
 
-    public static Hashtable createNodeNetworkConfig(String slice,String node, JsonHostApd hostApd,List<JsonVap> vaps){
+    public static Hashtable createNodeNetworkConfig(String slice,String node, HostApd hostApd,List<Vap> vaps){
     
         String command="";
         Hashtable responseParams=new Hashtable();
@@ -260,30 +260,30 @@ public class Utilities {
         try {
                       
             command=prefix+"ifconfig wlan0 up";
-            Utilities.remoteExecution(slice, command);
+            NodeUtilities.remoteExecution(slice, command);
             command=prefix+"ifconfig eth1 up";
-            Utilities.remoteExecution(slice, command);
+            NodeUtilities.remoteExecution(slice, command);
             
             for(int i=0;i<vaps.size();i++){
                 
                 //step 1 - add the neccessary bridges
                 command=prefix+"brctl addbr br"+String.valueOf(i);
-                Utilities.remoteExecution(slice, command);
+                NodeUtilities.remoteExecution(slice, command);
                 
                 //step 2 - add vlans on the eth1 interface
                 if(vaps.get(i).getVlan()>0){
                     command=prefix+"vconfig add eth1 "+String.valueOf(vaps.get(i).getVlan());
-                    Utilities.remoteExecution(slice, command);
+                    NodeUtilities.remoteExecution(slice, command);
 
                      command=prefix+"ip link set eth1."+String.valueOf(vaps.get(i).getVlan())+" up";
-                     Utilities.remoteExecution(slice, command);
+                     NodeUtilities.remoteExecution(slice, command);
                 }
                        
                 // step 3 - bring up all the bridges   
                 command=prefix+"ip link set up dev br"+String.valueOf(i);
-                Utilities.remoteExecution(slice, command);
+                NodeUtilities.remoteExecution(slice, command);
                 command=prefix+"ifconfig br"+String.valueOf(i)+" "+vaps.get(i).getNetwork()+" netmask "+vaps.get(i).getNetMask();
-                Utilities.remoteExecution(slice, command);
+                NodeUtilities.remoteExecution(slice, command);
                    
             }
             
@@ -293,7 +293,7 @@ public class Utilities {
                 else
                    command=prefix+"brctl addif br"+String.valueOf(i)+" eth1."+String.valueOf(vaps.get(i).getVlan());
                
-                Utilities.remoteExecution(slice, command);
+                NodeUtilities.remoteExecution(slice, command);
             }
 
           
@@ -319,10 +319,10 @@ public class Utilities {
         try {
              // Create hostapd file
             command=prefix+"rm /etc/hostapd/hostapd.conf";
-            Utilities.remoteExecution(slice, command);
+            NodeUtilities.remoteExecution(slice, command);
             
             command=prefix+"touch /etc/hostapd/hostapd.conf";
-            Utilities.remoteExecution(slice, command);
+            NodeUtilities.remoteExecution(slice, command);
 
             // Add Lines to the hostapd file
             String string;
@@ -330,17 +330,17 @@ public class Utilities {
             for (Iterator<String> it = hostApdlines.iterator(); it.hasNext();) {
                 string = it.next();
                 command="echo "+string+" |"+prefix+" 'cat>>/etc/hostapd/hostapd.conf'";
-                Utilities.remoteExecution(slice, command);
+                NodeUtilities.remoteExecution(slice, command);
             }
            
            //STEP 3: Make Hostapd Service and run
             String line="DAEMON_CONF=\"/etc/hostapd/hostapd.conf\"";
             command="echo "+line+" |"+prefix+" 'cat>>/etc/default/hostapd'";
-            Utilities.remoteExecution(slice, command);
+            NodeUtilities.remoteExecution(slice, command);
             response.put("hostApdServiceCreated", "yes");
             
             command=prefix+"'service hostapd start'";
-            Utilities.remoteExecution(slice, command);
+            NodeUtilities.remoteExecution(slice, command);
             response.put("hostApdServiceStarted", "yes");
 
            
@@ -357,9 +357,9 @@ public class Utilities {
         
     }
     
-    static public JsonHostApd parseHostApdConfig(JSONObject body){
+    static public HostApd parseHostApdConfig(JSONObject body){
     
-        JsonHostApd hostApd=new JsonHostApd();
+        HostApd hostApd=new HostApd();
         
         try {
          
@@ -367,19 +367,20 @@ public class Utilities {
             hostApd.setHw_mode(body.getString("hw_mode"));
             hostApd.setDriver(body.getString("driver"));
             hostApd.setMax_num_sta(body.getInt("max_num_sta"));
+            hostApd.setBssid(body.getString("bssid"));
             
         } catch (JSONException ex) {
-            Logger.getLogger(Utilities.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(NodeUtilities.class.getName()).log(Level.SEVERE, null, ex);
         }
        
         return hostApd;
         
     }
     
-    static public List<JsonVap> parseVapsConfig(JSONObject body) throws JSONException{
+    static public List<Vap> parseVapsConfig(JSONObject body) throws JSONException{
     
-        List<JsonVap> vaps=new ArrayList<JsonVap>();
-        List<JsonApQoSParams> vaps_qos=new ArrayList<JsonApQoSParams>();
+        List<Vap> vaps=new ArrayList<Vap>();
+        List<VapQoS> vaps_qos=new ArrayList<VapQoS>();
         
         JSONArray vapArray=body.getJSONArray("virtual-access-points");
         int vap_number=vapArray.length();
@@ -388,7 +389,7 @@ public class Utilities {
         for (int i = 0; i < vap_number; ++i) {
             vap = vapArray.getJSONObject(i);
             
-            vaps.add(new JsonVap());
+            vaps.add(new Vap());
            
             vaps.get(i).setId(i);
             vaps.get(i).setSsid(vap.getString("ssid"));
@@ -460,14 +461,16 @@ public class Utilities {
         
     }
     
-    public static List<String> exportHostApdLines(String slice, String nodeID,JsonHostApd hostApd,List<JsonVap> vaps){
+    public static List<String> exportHostApdLines(String slice, String nodeID,HostApd hostApd,List<Vap> vaps){
     
         List<String> hostApdLines=new ArrayList<String>();
     
         
         
         if(vaps.size()>1)
-           hostApdLines.add("bssid="+getBSSID(slice,nodeID));
+           hostApdLines.add("bssid="+hostApd.getBssid());
+        
+            //hostApdLines.add("bssid="+getBSSIDTemp(slice,nodeID));
         
         hostApdLines.add("channel="+String.valueOf(hostApd.getChannel()));
         hostApdLines.add("hw_mode="+String.valueOf(hostApd.getHw_mode()));
@@ -477,7 +480,7 @@ public class Utilities {
         return hostApdLines;
     }
     
-    public static List<String> exportVapsLines(List<JsonVap> vaps){
+    public static List<String> exportVapsLines(List<Vap> vaps){
     
        List<String> lines=new ArrayList<String>();
        
@@ -487,7 +490,7 @@ public class Utilities {
                     lines.add("interface=wlan0"); //Used by default by VAP 1
                 }
                 else if(i>0){
-                    lines.add("bss=wlan0_"+(i-1));
+                    lines.add("bss=wlan0_"+(i));
                 }
                 lines.add("bridge=br"+i);
                 lines.add("ssid="+String.valueOf(vaps.get(i).getSsid()));
@@ -570,7 +573,7 @@ public class Utilities {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
-    private static String getBSSID(String _slice,String _nodeID) {
+    private static String getBSSIDTemp(String _slice,String _nodeID) {
       
         String command="";
         String commandB="ifconfig wlan0 |grep -o \"HWaddr ..:..:..:..:..:..\"";
@@ -580,7 +583,7 @@ public class Utilities {
         command=prefix+"'"+commandB+"'";
         
         try {
-            response=Utilities.remoteExecution(_slice,command);
+            response=NodeUtilities.remoteExecution(_slice,command);
         } catch (IOException ex) {
             Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -588,7 +591,7 @@ public class Utilities {
         return response;
     }
     
-    static Hashtable loadInterfacesFile(String slice, String nodeID, List<JsonVap> vaps) {
+    static Hashtable loadInterfacesFile(String slice, String nodeID, List<Vap> vaps) {
                
         String command="";
         String string="";
@@ -600,10 +603,10 @@ public class Utilities {
         try {
              if(vaps.size()>1){
             command=prefix+"rm /etc/network/interfaces";
-            Utilities.remoteExecution(slice, command);
+            NodeUtilities.remoteExecution(slice, command);
             
             command=prefix+"touch /etc/network/interfaces";
-            Utilities.remoteExecution(slice, command);
+            NodeUtilities.remoteExecution(slice, command);
 
             
             // Add Lines to the interfaces file
@@ -614,16 +617,16 @@ public class Utilities {
                      
                  }
             command="echo "+string+" |"+prefix+" 'cat>>/etc/network/interfaces'";
-            Utilities.remoteExecution(slice, command);
+            NodeUtilities.remoteExecution(slice, command);
             
             // line 2
             string="iface lo inet loopback";
             command="echo "+string+" |"+prefix+" 'cat>>/etc/network/interfaces'";
-            Utilities.remoteExecution(slice, command);
+            NodeUtilities.remoteExecution(slice, command);
             // line 3
             string="iface eth0 inet dhcp";
             command="echo "+string+" |"+prefix+" 'cat>>/etc/network/interfaces'";
-            Utilities.remoteExecution(slice, command);
+            NodeUtilities.remoteExecution(slice, command);
             
             List<String> lines;
             
@@ -644,12 +647,12 @@ public class Utilities {
                 for (Iterator<String> it = lines.iterator(); it.hasNext();) {
                     string = it.next();
                     command="echo "+string+" |"+prefix+" 'cat>>/etc/network/interfaces'";
-                    Utilities.remoteExecution(slice, command);
+                    NodeUtilities.remoteExecution(slice, command);
                 }
                
                 string = "";
                 command="echo "+string+" |"+prefix+" 'cat>>/etc/network/interfaces'";
-                Utilities.remoteExecution(slice, command);
+                NodeUtilities.remoteExecution(slice, command);
             }
            
            //STEP 3: Make Hostapd Service and run

@@ -10,7 +10,7 @@ package Content;
  *
  * @author nitlab
  */
-public class JsonVap {
+public class Vap {
     
     public int id;
     public String ssid;
@@ -28,7 +28,7 @@ public class JsonVap {
     public int max_num_sta;
     public String ht_capab;
 
-    public JsonApQoSParams qosParameters;
+    public VapQoS qosParameters;
     
     public int getId() {
         return id;
@@ -142,16 +142,16 @@ public class JsonVap {
         this.ht_capab = ht_capab;
     }
 
-    public JsonApQoSParams getQosParameters() {
+    public VapQoS getQosParameters() {
         return qosParameters;
     }
 
-    public void setQosParameters(JsonApQoSParams qosParameters) {
+    public void setQosParameters(VapQoS qosParameters) {
         this.qosParameters = qosParameters;
     }
     
     public void createQoSparameters(){
-     this.qosParameters=new JsonApQoSParams();
+     this.qosParameters=new VapQoS();
     }
     
     

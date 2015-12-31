@@ -10,7 +10,7 @@ package Content;
  *
  * @author nitlab
  */
-public class JsonApQoSParams {
+public class VapQoS {
     
 public double wmm_ac_bk_cwmin=4;
 public double wmm_ac_bk_cwmax=10;

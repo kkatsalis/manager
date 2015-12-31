@@ -1,0 +1,17 @@
+{
+    "provider-id": "nitlab",
+    "provider-name":"vodafone", 
+    "vlan":"692",
+    "controllerIP":"10.64.92.123",
+    "controllerPort":"6633",
+    "of-version":"1.3",
+    "nodes":[
+        {
+            "nodeID":"node060"
+        },
+        {
+            "nodeID":"node070"
+        }
+        
+    ]
+}

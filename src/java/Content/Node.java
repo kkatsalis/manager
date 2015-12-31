@@ -32,7 +32,7 @@ import org.json.JSONObject;
 /**
  * REST Web Service
  *
- * @author nitlab
+ * @author Kostas Katsalis
  */
 @Path("")
 public class Node {
@@ -66,13 +66,13 @@ public class Node {
         try {
             // on/off/reset
             if("on".equals(action.toLowerCase()))
-               jsonResponse=Utilities.cmExecuteAction(slice, nodeID, action,omf);
+               jsonResponse=NodeUtilities.cmExecuteAction(slice, nodeID, action,omf);
             else if("off".equals(action.toLowerCase()))
-               jsonResponse=Utilities.cmExecuteAction(slice, nodeID, action,omf);
+               jsonResponse=NodeUtilities.cmExecuteAction(slice, nodeID, action,omf);
             else if("reset".equals(action.toLowerCase()))
-                jsonResponse=Utilities.cmExecuteAction(slice, nodeID, action,omf);
+                jsonResponse=NodeUtilities.cmExecuteAction(slice, nodeID, action,omf);
             else if("status".equals(action.toLowerCase())){
-                jsonResponse=Utilities.cmStatus(slice,nodeID,omf);
+                jsonResponse=NodeUtilities.cmStatus(slice,nodeID,omf);
              }
          
         } catch (IOException ex) {
@@ -94,16 +94,18 @@ public class Node {
     @Produces("application/json")
     public String imageLoad(@QueryParam("nodeID") String _nodeID,
                             @QueryParam("slice") String _slice,                   
-                            @QueryParam("omf") String _omfVersion) {
+                            @QueryParam("omf") String _omfVersion,
+                            @QueryParam("image") String _imageName) {
        
         String slice=_slice;
         String nodeID=_nodeID;
         String omf=_omfVersion;
+        String imageName=_imageName;
         String jsonResponse="";
      
         try {
             // Image load
-                jsonResponse=Utilities.executeImageLoad(slice,nodeID,omf);
+                jsonResponse=NodeUtilities.executeImageLoad(slice,nodeID,omf,imageName);
         } catch (IOException ex) {
           Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -134,7 +136,7 @@ public class Node {
                
         
         try {
-            response=Utilities.remoteExecution(_slice,command);
+            response=NodeUtilities.remoteExecution(_slice,command);
         } catch (IOException ex) {
             Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -166,7 +168,7 @@ public class Node {
           JSONObject body=new JSONObject(_body);
           
           // STEP 0: Install necessary libraries
-          libResponse=Utilities.prepareNodeLibraries(_slice,_nodeID);  
+          libResponse=NodeUtilities.prepareNodeLibraries(_slice,_nodeID);  
           
           if(!libResponse.isEmpty())
               responseParameters.put("librariesLoaded", "ok");
@@ -174,8 +176,8 @@ public class Node {
               responseParameters.put("librariesLoaded", "error");
           
           // STEP 1: Parse hostapd 
-          JsonHostApd hostApd=Utilities.parseHostApdConfig(body);
-          List<JsonVap> vaps=Utilities.parseVapsConfig(body);
+          HostApd hostApd=NodeUtilities.parseHostApdConfig(body);
+          List<Vap> vaps=NodeUtilities.parseVapsConfig(body);
           
           if(hostApd!=null&vaps!=null)
              responseParameters.put("parsingHostApd", "ok");
@@ -183,7 +185,7 @@ public class Node {
              responseParameters.put("parsingHostApd", "error");
           
            // STEP 2: Load the Network Configuration 
-          netResponse=Utilities.createNodeNetworkConfig(_slice,_nodeID,hostApd,vaps);
+          netResponse=NodeUtilities.createNodeNetworkConfig(_slice,_nodeID,hostApd,vaps);
          
           if(!netResponse.isEmpty())
              responseParameters.put("createNodeNetworkConfig", "ok");
@@ -197,7 +199,7 @@ public class Node {
            
           
           // 3.1 Prepare hostapd lines
-          List<String> lines_hostApd=Utilities.exportHostApdLines(_slice,_nodeID,hostApd,vaps);
+          List<String> lines_hostApd=NodeUtilities.exportHostApdLines(_slice,_nodeID,hostApd,vaps);
           
              for (Iterator<String> it = lines_hostApd.iterator(); it.hasNext();) {
                 line = it.next();
@@ -206,7 +208,7 @@ public class Node {
          
           // 3.2 Add vaps lines
           
-          List<String> lines_vaps=Utilities.exportVapsLines(vaps);
+          List<String> lines_vaps=NodeUtilities.exportVapsLines(vaps);
           
           for (Iterator<String> it = lines_vaps.iterator(); it.hasNext();) {
                 line = it.next();
@@ -219,14 +221,14 @@ public class Node {
               responseParameters.put("hostApdLinesCreated", "yes"); 
          
         // STEP 4: Load the HostApd file and start the Service
-        hostapdServiceResponse=Utilities.loadAndStartHostApdService(_slice,_nodeID, configLines);
+        hostapdServiceResponse=NodeUtilities.loadAndStartHostApdService(_slice,_nodeID, configLines);
           
         } catch (JSONException ex) {
             Logger.getLogger(Node.class.getName()).log(Level.SEVERE, null, ex);
         }
         
-       Hashtable response=Utilities.mergeHashtables(responseParameters,libResponse,netResponse,hostapdServiceResponse);  
-       String jsonResponse=Utilities.createJsonResponse(response);
+       Hashtable response=NodeUtilities.mergeHashtables(responseParameters,libResponse,netResponse,hostapdServiceResponse);  
+       String jsonResponse=NodeUtilities.createJsonResponse(response);
          
          
          return jsonResponse;

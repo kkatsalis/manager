@@ -10,13 +10,23 @@ package Content;
  *
  * @author Katsalis
  */
-public class JsonHostApd {
+public class HostApd {
     
 public int channel;
 public String hw_mode;
 public String driver;
 public int max_num_sta;
-    
+public String bssid;    
+
+    public String getBssid() {
+        return bssid;
+    }
+
+    public void setBssid(String bssid) {
+        this.bssid = bssid;
+    }
+
+
     public int getChannel() {
         return channel;
     }
