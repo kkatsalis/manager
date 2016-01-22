@@ -319,7 +319,7 @@ public class NodeUtilities {
         try {
              // Create hostapd file
             command=prefix+"rm /etc/hostapd/hostapd.conf";
-            NodeUtilities.remoteExecution(slice, command);
+        //    NodeUtilities.remoteExecution(slice, command);
             
             command=prefix+"touch /etc/hostapd/hostapd.conf";
             NodeUtilities.remoteExecution(slice, command);
